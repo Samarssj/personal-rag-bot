@@ -59,7 +59,7 @@ export function favoriteMediaAnswer(question: string): { title: string; answer: 
 }
 
 /** Returns verified public links directly so visitors never receive partial or altered URLs. */
-export function profileLinkAnswer(question: string): { title: string; answer: string } | null {
+export function profileLinkAnswer(question: string, options: { resumeUrl?: string } = {}): { title: string; answer: string } | null {
   const normalized = question.toLocaleLowerCase();
   const asksForResume = /\b(?:resume|cv)\b/.test(normalized);
   const asksForPortfolio = /\bportfolio\b/.test(normalized);
@@ -68,7 +68,7 @@ export function profileLinkAnswer(question: string): { title: string; answer: st
     && !/\b(?:projects?|repositories|repos)\b/.test(normalized);
   const links = [
     asksForPortfolio ? `- **My portfolio website:** ${PORTFOLIO_URL}` : null,
-    asksForResume ? `- **Download my resume:** ${RESUME_DOWNLOAD_URL}` : null,
+    asksForResume ? `- **Download my resume:** ${options.resumeUrl ?? RESUME_DOWNLOAD_URL}` : null,
     asksForLinkedIn ? `- **My LinkedIn:** ${LINKEDIN_URL}` : null,
     asksForGitHubProfile ? `- **My GitHub:** ${GITHUB_PROFILE_URL}` : null,
   ].filter((link): link is string => Boolean(link));
@@ -78,9 +78,9 @@ export function profileLinkAnswer(question: string): { title: string; answer: st
 }
 
 /** Returns every verified certification and credential link without model-side truncation. */
-export function certificationCatalogAnswer(question: string): { title: string; answer: string } | null {
+export function certificationCatalogAnswer(question: string, certificationCatalog = CERTIFICATION_CATALOG_ANSWER): { title: string; answer: string } | null {
   if (!/\b(?:certification|certifications|credential|credentials|badge|badges)\b/i.test(question)) return null;
-  return { title: "Certifications", answer: CERTIFICATION_CATALOG_ANSWER };
+  return { title: "Certifications", answer: certificationCatalog };
 }
 
 const DETAILED_EXPERIENCE_ANSWER = "- I am a fresher with two internships—AI Engineer Intern at EXL and ABM Intern at HighRadius—and I have recently joined EXL as an Associate AI Developer.\n- In my present EXL Associate AI Developer role, I work on Google Cloud Platform, build AI solutions and automations, and develop conversational and agentic AI chatbots.\n- In my current company client project, I use Scrapy, the Python web-scraping library, to build agents.\n- During my EXL AI Engineer Internship from April 2026 to July 2026, I developed and deployed generative-AI solutions with Google Cloud Vertex AI, CX Agent Studio, and Cloud Run; built LLM-powered conversational agents; and implemented prompt-engineering, evaluation, and retrieval-based architectures. The recorded outcomes include a 35% reduction in manual effort, 40% higher response accuracy, 30% lower processing time, and 25% lower operational turnaround time.\n- During my HighRadius ABM Internship from September 2025 to January 2026, I analysed enterprise-account and engagement data, automated campaign tracking and reporting, improved lead qualification through CRM and marketing platforms, and supported outreach strategy. The recorded outcomes include 40% lower reporting effort and 30% better lead-qualification accuracy.";

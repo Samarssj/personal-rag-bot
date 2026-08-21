@@ -127,7 +127,7 @@ The repository includes a ready-to-use [`render.yaml`](./render.yaml).
 
 1. Push the project to GitHub.
 2. In Render, select **New → Blueprint** and choose this repository. Alternatively, choose **New → Web Service**.
-3. Set `GEMINI_API_KEY` in the service’s **Environment** section. Add an optional server-only `GITHUB_TOKEN` if visitors will frequently request the complete project catalog.
+3. Set `GEMINI_API_KEY` in the service’s **Environment** section. Add an optional server-only `GITHUB_TOKEN` if visitors will frequently request the complete project catalog, resume link, or certification catalog.
 4. Render uses the following configuration automatically:
 
 | Setting | Value |
@@ -167,6 +167,7 @@ render.yaml             Render service configuration
 
 - Resume sessions are intentionally **temporary**. They are unavailable after a Render restart or redeploy.
 - Public GitHub repositories are fetched live whenever a visitor requests the complete project catalog, so a newly public repository is included without redeployment. Add a server-only `GITHUB_TOKEN` in Render to make frequent refreshes more resilient to GitHub API rate limits; the verified fallback preserves useful answers if GitHub is temporarily unavailable.
+- The resume link and certification catalog are read live from the public `samar-portfolio1` source when a visitor requests them. Changing those source records updates chat answers without redeploying; verified built-in values remain available if GitHub is temporarily unavailable or the source is malformed.
 - The fixed portfolio information lives in [`server/defaultKnowledge.ts`](./server/defaultKnowledge.ts), making it simple to review or update.
 
 ---

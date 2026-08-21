@@ -6,6 +6,7 @@ import { SAMAR_KNOWLEDGE_BASE, type KnowledgeSection } from "./defaultKnowledge"
 import { formatProjectCatalog, getGitHubProjects, projectKnowledgeSections } from "./github";
 import { generateGeminiText } from "./geminiDirect";
 import { createJobMatch, formatJobMatchMarkdown } from "./jobMatch";
+import { getLivePortfolioRefresh } from "./portfolioSource";
 import { buildGroundedSystemPrompt, certificationCatalogAnswer, detailedExperienceAnswer, favoriteMediaAnswer, formatAsBulletList, hometownAnswer, isGreetingOnly, profileLinkAnswer, requestsProjectCatalog, retrieveRelevantSections, sourceLabels, splitResumeIntoSections, type ChatScope } from "./rag";
 import { DEFAULT_PORTFOLIO_PROFILE, profileKnowledgeSection } from "./profile";
 import { extractResumeText, MAX_RESUME_BYTES, validateResumeUpload } from "./resumeProcessing";
@@ -212,6 +213,8 @@ export function registerResumeRagRoutes(app: Express) {
 
       const directProfileLink = scope === "samar" ? profileLinkAnswer(question) : null;
       if (directProfileLink) {
+        const livePortfolio = await getLivePortfolioRefresh();
+        const refreshedProfileLink = profileLinkAnswer(question, { resumeUrl: livePortfolio.resumeUrl }) ?? directProfileLink;
         res.status(200);
         res.set({
           "Cache-Control": "no-cache, no-transform",
@@ -220,14 +223,16 @@ export function registerResumeRagRoutes(app: Express) {
           "X-Accel-Buffering": "no",
         });
         res.flushHeaders();
-        sendSse(res, "sources", { labels: [directProfileLink.title] });
-        sendSse(res, "token", { delta: directProfileLink.answer });
+        sendSse(res, "sources", { labels: [refreshedProfileLink.title] });
+        sendSse(res, "token", { delta: refreshedProfileLink.answer });
         sendSse(res, "done", { ok: true });
         return res.end();
       }
 
       const directCertificationCatalog = scope === "samar" ? certificationCatalogAnswer(question) : null;
       if (directCertificationCatalog) {
+        const livePortfolio = await getLivePortfolioRefresh();
+        const refreshedCertificationCatalog = certificationCatalogAnswer(question, livePortfolio.certificationCatalog) ?? directCertificationCatalog;
         res.status(200);
         res.set({
           "Cache-Control": "no-cache, no-transform",
@@ -236,8 +241,8 @@ export function registerResumeRagRoutes(app: Express) {
           "X-Accel-Buffering": "no",
         });
         res.flushHeaders();
-        sendSse(res, "sources", { labels: [directCertificationCatalog.title] });
-        sendSse(res, "token", { delta: directCertificationCatalog.answer });
+        sendSse(res, "sources", { labels: [refreshedCertificationCatalog.title] });
+        sendSse(res, "token", { delta: refreshedCertificationCatalog.answer });
         sendSse(res, "done", { ok: true });
         return res.end();
       }
