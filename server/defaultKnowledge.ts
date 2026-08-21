@@ -9,6 +9,8 @@ export const FAVORITE_MOVIES_ANSWER = "- **Primer** — A minimalist science-fic
 
 export const FAVORITE_SERIES_ANSWER = "- **Dark** — A German science-fiction mystery centered on time travel.\n- **Stranger Things** — A science-fiction horror series with supernatural events.\n- **Elite** — A Spanish teen mystery drama set around an elite school.";
 
+export const FAVORITE_SONGS_ANSWER = "- **Hotel Drive** — Vice Monroe.\n- **The Unknown** — Bonnie x Clyde.\n- **Cigarette Stub** — Asal.";
+
 export const RESUME_DOWNLOAD_URL = "https://drive.google.com/file/d/1ygq4aSNoREhRY-VxNdygpeVU2-_NCUVX/view?usp=drivesdk";
 export const PORTFOLIO_URL = "https://samar-portfolio1.vercel.app";
 export const LINKEDIN_URL = "https://in.linkedin.com/in/samarssj";

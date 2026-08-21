@@ -145,6 +145,15 @@ describe("resume RAG retrieval", () => {
     expect(result?.answer.split("\n").every(line => line.startsWith("- "))).toBe(true);
   });
 
+  it("returns all verified favorite songs for hybrid Gemini responses", () => {
+    const result = favoriteMediaAnswer("What songs and music do you like?");
+
+    expect(result).toMatchObject({ title: "Favorite Songs" });
+    expect(result?.answer).toContain("**Hotel Drive** — Vice Monroe.");
+    expect(result?.answer).toContain("**The Unknown** — Bonnie x Clyde.");
+    expect(result?.answer).toContain("**Cigarette Stub** — Asal.");
+  });
+
   it("returns the exact verified professional links for direct requests", () => {
     expect(profileLinkAnswer("Can I see your portfolio?")).toMatchObject({
       title: "Professional Links",
@@ -245,6 +254,18 @@ describe("resume RAG retrieval", () => {
     expect(prompt).toContain("exact GitHub repository URL");
     expect(prompt).toContain("credential URLs");
     expect(prompt).toContain("Never turn a reasonable synthesis into an unsupported personal claim");
+  });
+
+  it("tells Gemini to respond conversationally when verified details will be appended", () => {
+    const prompt = buildGroundedSystemPrompt(
+      "samar",
+      [{ title: "Favorite Movies", content: "Primer and Interstellar." }],
+      { verifiedDetails: [{ title: "Favorite Movies", answer: "- Primer" }] },
+    );
+
+    expect(prompt).toContain("warm, friendly, first-person bullets");
+    expect(prompt).toContain("do not name or list individual catalog entries");
+    expect(prompt).toContain("[Favorite Movies]\n- Primer");
   });
 
   it("keeps section labels and creates sensible sections from a parsed resume", () => {

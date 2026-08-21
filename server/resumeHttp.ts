@@ -8,7 +8,7 @@ import { generateGeminiText } from "./geminiDirect";
 import { createJobMatch, formatJobMatchMarkdown } from "./jobMatch";
 import { getLivePortfolioRefresh } from "./portfolioSource";
 import { buildGroundedSystemPrompt, certificationCatalogAnswer, detailedExperienceAnswer, favoriteMediaAnswer, formatAsBulletList, hometownAnswer, isGreetingOnly, profileLinkAnswer, requestsProjectCatalog, retrieveRelevantSections, sourceLabels, splitResumeIntoSections, type ChatScope } from "./rag";
-import { DEFAULT_PORTFOLIO_PROFILE, profileKnowledgeSection } from "./profile";
+import { calculateAge, DEFAULT_PORTFOLIO_PROFILE, formatBirthDate, profileKnowledgeSection } from "./profile";
 import { extractResumeText, MAX_RESUME_BYTES, validateResumeUpload } from "./resumeProcessing";
 import { createInMemoryResumeSession, deleteInMemoryResumeSession, getInMemoryResumeSession, pruneExpiredResumeSessions } from "./resumeSessionStore";
 
@@ -70,6 +70,94 @@ export function visitorChatError(message: string): string {
   return /usage exhausted|precondition failed/i.test(message)
     ? "The AI response service is temporarily unavailable. Please try again later."
     : "Unable to generate a response.";
+}
+
+export type VerifiedChatDetail = {
+  title: string;
+  answer: string;
+  appendAfterFriendlyAnswer: boolean;
+};
+
+/** Supplies exact fixed facts only when a visitor directly asks for the related personal profile detail. */
+export function verifiedPersonalFactDetails(question: string): VerifiedChatDetail[] {
+  const normalized = question.toLocaleLowerCase();
+  const details: VerifiedChatDetail[] = [];
+  const birthDate = DEFAULT_PORTFOLIO_PROFILE.birthDate;
+
+  if (/\b(?:age|birthday|birth date|date of birth|born)\b/.test(normalized)) {
+    details.push({
+      title: "Birth Date and Age",
+      answer: `- **Date of birth:** ${formatBirthDate(birthDate)}.\n- **Current age:** ${calculateAge(birthDate)} years old.`,
+      appendAfterFriendlyAnswer: true,
+    });
+  }
+  if (/\b(?:height|tall|stature)\b/.test(normalized)) {
+    details.push({ title: "Height", answer: "- **Height:** I am 6 feet tall.", appendAfterFriendlyAnswer: true });
+  }
+  if (/\b(?:study|studied|education|university|college|degree|cgpa)\b/.test(normalized)) {
+    details.push({
+      title: "Education",
+      answer: "- **Education:** I completed a B.E. in Computer Science Engineering at Chitkara University, Punjab, from August 2022 to August 2026, with a CGPA of 7.76.",
+      appendAfterFriendlyAnswer: true,
+    });
+  }
+  if (/\b(?:hobby|hobbies|badminton|fun fact)\b/.test(normalized)) {
+    details.push({
+      title: "Hobbies & Fun Facts",
+      answer: "- **Hobby:** Badminton.\n- **Fun fact:** I can play badminton with both hands.",
+      appendAfterFriendlyAnswer: true,
+    });
+  }
+  if (/\b(?:contact|email|reach|phone)\b/.test(normalized)) {
+    details.push({ title: "Contact", answer: "- **Email:** ssjsamar453@gmail.com.", appendAfterFriendlyAnswer: true });
+  }
+  if (/\b(?:pronoun|pronouns|gay|straight|sexual orientation|sexuality)\b/.test(normalized)) {
+    details.push({ title: "Personal Identity", answer: "- **Pronouns:** he/him.\n- **Sexual orientation:** straight.", appendAfterFriendlyAnswer: true });
+  }
+  if (/\b(?:relationship|dating|single|partner)\b/.test(normalized)) {
+    details.push({ title: "Relationship Status", answer: "- **Relationship status:** Single and trying things out.", appendAfterFriendlyAnswer: true });
+  }
+  if (/\b(?:religion|religious|sikhism|sikh)\b/.test(normalized)) {
+    details.push({ title: "Religion", answer: "- **Religion:** Sikhism.", appendAfterFriendlyAnswer: true });
+  }
+
+  return details;
+}
+
+function verifiedCatalogMarkers(details: VerifiedChatDetail[]): string[] {
+  return Array.from(new Set(details.flatMap(detail => [
+    ...Array.from(detail.answer.matchAll(/\*\*([^*]+)\*\*/g), match => match[1] ?? ""),
+    ...Array.from(detail.answer.matchAll(/https?:\/\/\S+/g), match => match[0] ?? ""),
+  ]).filter(Boolean)));
+}
+
+/** Removes model bullets that repeat an exact catalog title or URL which is appended below as verified data. */
+export function removeRepeatedVerifiedCatalogEntries(modelAnswer: string, details: VerifiedChatDetail[]): string {
+  const markers = verifiedCatalogMarkers(details);
+  if (markers.length === 0) return formatAsBulletList(modelAnswer);
+
+  return formatAsBulletList(modelAnswer)
+    .split("\n")
+    .filter(line => !markers.some(marker => line.toLocaleLowerCase().includes(marker.toLocaleLowerCase())))
+    .join("\n");
+}
+
+/** Combines Gemini's conversational framing with server-verified details that must remain complete and exact. */
+export function combineFriendlyAndVerifiedAnswer(modelAnswer: string, details: VerifiedChatDetail[]): string {
+  const friendlyAnswer = removeRepeatedVerifiedCatalogEntries(modelAnswer, details);
+  const appendedDetails = details
+    .filter(detail => detail.appendAfterFriendlyAnswer)
+    .map(detail => `- **Verified ${detail.title}:**\n${formatAsBulletList(detail.answer)}`)
+    .join("\n");
+
+  return [friendlyAnswer, appendedDetails].filter(Boolean).join("\n");
+}
+
+/** Falls back to verified direct details if the Gemini service is temporarily unavailable. */
+export function verifiedDetailsFallback(details: VerifiedChatDetail[]): string {
+  return details
+    .map(detail => `- **${detail.title}:**\n${formatAsBulletList(detail.answer)}`)
+    .join("\n");
 }
 
 export function registerResumeRagRoutes(app: Express) {
@@ -163,104 +251,29 @@ export function registerResumeRagRoutes(app: Express) {
         return res.end();
       }
 
+      const verifiedDetails: VerifiedChatDetail[] = [];
       const directHometown = scope === "samar" ? hometownAnswer(question) : null;
-      if (directHometown) {
-        res.status(200);
-        res.set({
-          "Cache-Control": "no-cache, no-transform",
-          Connection: "keep-alive",
-          "Content-Type": "text/event-stream",
-          "X-Accel-Buffering": "no",
-        });
-        res.flushHeaders();
-        sendSse(res, "sources", { labels: [directHometown.title] });
-        sendSse(res, "token", { delta: directHometown.answer });
-        sendSse(res, "done", { ok: true });
-        return res.end();
-      }
-
       const directExperience = scope === "samar" ? detailedExperienceAnswer(question) : null;
-      if (directExperience) {
-        res.status(200);
-        res.set({
-          "Cache-Control": "no-cache, no-transform",
-          Connection: "keep-alive",
-          "Content-Type": "text/event-stream",
-          "X-Accel-Buffering": "no",
-        });
-        res.flushHeaders();
-        sendSse(res, "sources", { labels: [directExperience.title] });
-        sendSse(res, "token", { delta: directExperience.answer });
-        sendSse(res, "done", { ok: true });
-        return res.end();
-      }
-
       const directFavoriteMedia = scope === "samar" ? favoriteMediaAnswer(question) : null;
-      if (directFavoriteMedia) {
-        res.status(200);
-        res.set({
-          "Cache-Control": "no-cache, no-transform",
-          Connection: "keep-alive",
-          "Content-Type": "text/event-stream",
-          "X-Accel-Buffering": "no",
-        });
-        res.flushHeaders();
-        sendSse(res, "sources", { labels: [directFavoriteMedia.title] });
-        sendSse(res, "token", { delta: directFavoriteMedia.answer });
-        sendSse(res, "done", { ok: true });
-        return res.end();
-      }
-
       const directProfileLink = scope === "samar" ? profileLinkAnswer(question) : null;
-      if (directProfileLink) {
-        const livePortfolio = await getLivePortfolioRefresh();
-        const refreshedProfileLink = profileLinkAnswer(question, { resumeUrl: livePortfolio.resumeUrl }) ?? directProfileLink;
-        res.status(200);
-        res.set({
-          "Cache-Control": "no-cache, no-transform",
-          Connection: "keep-alive",
-          "Content-Type": "text/event-stream",
-          "X-Accel-Buffering": "no",
-        });
-        res.flushHeaders();
-        sendSse(res, "sources", { labels: [refreshedProfileLink.title] });
-        sendSse(res, "token", { delta: refreshedProfileLink.answer });
-        sendSse(res, "done", { ok: true });
-        return res.end();
-      }
-
       const directCertificationCatalog = scope === "samar" ? certificationCatalogAnswer(question) : null;
-      if (directCertificationCatalog) {
-        const livePortfolio = await getLivePortfolioRefresh();
-        const refreshedCertificationCatalog = certificationCatalogAnswer(question, livePortfolio.certificationCatalog) ?? directCertificationCatalog;
-        res.status(200);
-        res.set({
-          "Cache-Control": "no-cache, no-transform",
-          Connection: "keep-alive",
-          "Content-Type": "text/event-stream",
-          "X-Accel-Buffering": "no",
-        });
-        res.flushHeaders();
-        sendSse(res, "sources", { labels: [refreshedCertificationCatalog.title] });
-        sendSse(res, "token", { delta: refreshedCertificationCatalog.answer });
-        sendSse(res, "done", { ok: true });
-        return res.end();
-      }
+      const asksForVerifiedProjectCatalog = scope === "samar" && requestsProjectCatalog(question);
 
-      if (scope === "samar" && requestsProjectCatalog(question)) {
-        const projects = await getGitHubProjects(DEFAULT_PORTFOLIO_PROFILE.githubUsername, { forceRefresh: true });
-        res.status(200);
-        res.set({
-          "Cache-Control": "no-cache, no-transform",
-          Connection: "keep-alive",
-          "Content-Type": "text/event-stream",
-          "X-Accel-Buffering": "no",
-        });
-        res.flushHeaders();
-        sendSse(res, "sources", { labels: ["GitHub Projects"] });
-        sendSse(res, "token", { delta: formatProjectCatalog(projects) });
-        sendSse(res, "done", { ok: true });
-        return res.end();
+      if (directHometown) verifiedDetails.push({ ...directHometown, appendAfterFriendlyAnswer: true });
+      if (directExperience) verifiedDetails.push({ ...directExperience, appendAfterFriendlyAnswer: true });
+      if (directFavoriteMedia) verifiedDetails.push({ ...directFavoriteMedia, appendAfterFriendlyAnswer: true });
+      verifiedDetails.push(...(scope === "samar" ? verifiedPersonalFactDetails(question) : []));
+
+      if (directProfileLink || directCertificationCatalog) {
+        const livePortfolio = await getLivePortfolioRefresh();
+        const refreshedProfileLink = directProfileLink
+          ? profileLinkAnswer(question, { resumeUrl: livePortfolio.resumeUrl })
+          : null;
+        const refreshedCertificationCatalog = directCertificationCatalog
+          ? certificationCatalogAnswer(question, livePortfolio.certificationCatalog)
+          : null;
+        if (refreshedProfileLink) verifiedDetails.push({ ...refreshedProfileLink, appendAfterFriendlyAnswer: true });
+        if (refreshedCertificationCatalog) verifiedDetails.push({ ...refreshedCertificationCatalog, appendAfterFriendlyAnswer: true });
       }
 
       let uploadedSections: KnowledgeSection[] | undefined;
@@ -276,7 +289,15 @@ export function registerResumeRagRoutes(app: Express) {
         const profile = DEFAULT_PORTFOLIO_PROFILE;
         let projectSections: KnowledgeSection[] = [];
         try {
-          projectSections = projectKnowledgeSections(await getGitHubProjects(profile.githubUsername));
+          const projects = await getGitHubProjects(profile.githubUsername, { forceRefresh: asksForVerifiedProjectCatalog });
+          projectSections = projectKnowledgeSections(projects);
+          if (asksForVerifiedProjectCatalog) {
+            verifiedDetails.push({
+              title: "GitHub Projects",
+              answer: formatProjectCatalog(projects),
+              appendAfterFriendlyAnswer: true,
+            });
+          }
         } catch {
           // A temporary GitHub API failure must not affect the permanent profile chat.
         }
@@ -294,7 +315,7 @@ export function registerResumeRagRoutes(app: Express) {
         asksForProjectCatalog || asksForCredentialCatalog ? 30 : scope === "samar" ? 13 : 4,
         samarSections,
       );
-      const systemPrompt = buildGroundedSystemPrompt(scope, sources);
+      const systemPrompt = buildGroundedSystemPrompt(scope, sources, { verifiedDetails });
       const history = parseHistory(req.body?.history);
       res.status(200);
       res.set({
@@ -304,18 +325,29 @@ export function registerResumeRagRoutes(app: Express) {
         "X-Accel-Buffering": "no",
       });
       res.flushHeaders();
-      sendSse(res, "sources", { labels: sourceLabels(sources) });
-      const answer = await generateGeminiText({
-        systemPrompt,
-        messages: [...history, { role: "user", content: question }],
-        temperature: 0.8,
-        maxOutputTokens: asksForProjectCatalog || asksForCredentialCatalog
-          ? 2_200
-          : asksForExperience || asksForCareerProfile || scope === "samar"
-            ? 1_400
-            : 900,
+      sendSse(res, "sources", {
+        labels: Array.from(new Set([...sourceLabels(sources), ...verifiedDetails.map(detail => detail.title)])),
       });
-      const formattedAnswer = formatAsBulletList(answer);
+      let answer: string;
+      try {
+        answer = await generateGeminiText({
+          systemPrompt,
+          messages: [...history, { role: "user", content: question }],
+          temperature: 0.8,
+          maxOutputTokens: asksForProjectCatalog || asksForCredentialCatalog
+            ? 2_200
+            : asksForExperience || asksForCareerProfile || scope === "samar"
+              ? 1_400
+              : 900,
+        });
+      } catch (error) {
+        const verifiedFallback = verifiedDetailsFallback(verifiedDetails);
+        if (!verifiedFallback) throw error;
+        sendSse(res, "token", { delta: verifiedFallback });
+        sendSse(res, "done", { ok: true });
+        return res.end();
+      }
+      const formattedAnswer = combineFriendlyAndVerifiedAnswer(answer, verifiedDetails);
       if (formattedAnswer) sendSse(res, "token", { delta: formattedAnswer });
       sendSse(res, "done", { ok: true });
       return res.end();
