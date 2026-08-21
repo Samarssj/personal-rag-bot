@@ -287,7 +287,13 @@ export function registerResumeRagRoutes(app: Express) {
       const asksForCredentialCatalog = scope === "samar" && /\b(certification|certifications|credential|credentials|badge|badges)\b/i.test(question);
       const asksForCareerProfile = scope === "samar" && /\b(core strengths?|preferred roles?|work preferences?|current client (?:work|project)|scrapy)\b/i.test(question);
       const asksForExperience = scope === "samar" && /\b(?:experience|experince|career|professional journey|work history|work background|internship|internships)\b/i.test(question);
-      const sources = retrieveRelevantSections(scope, question, uploadedSections, asksForProjectCatalog || asksForCredentialCatalog ? 30 : 4, samarSections);
+      const sources = retrieveRelevantSections(
+        scope,
+        question,
+        uploadedSections,
+        asksForProjectCatalog || asksForCredentialCatalog ? 30 : scope === "samar" ? 13 : 4,
+        samarSections,
+      );
       const systemPrompt = buildGroundedSystemPrompt(scope, sources);
       const history = parseHistory(req.body?.history);
       res.status(200);
@@ -303,7 +309,11 @@ export function registerResumeRagRoutes(app: Express) {
         systemPrompt,
         messages: [...history, { role: "user", content: question }],
         temperature: 0.8,
-        maxOutputTokens: asksForProjectCatalog || asksForCredentialCatalog ? 2_200 : asksForExperience || asksForCareerProfile ? 1_400 : 900,
+        maxOutputTokens: asksForProjectCatalog || asksForCredentialCatalog
+          ? 2_200
+          : asksForExperience || asksForCareerProfile || scope === "samar"
+            ? 1_400
+            : 900,
       });
       const formattedAnswer = formatAsBulletList(answer);
       if (formattedAnswer) sendSse(res, "token", { delta: formattedAnswer });

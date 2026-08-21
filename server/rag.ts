@@ -334,6 +334,37 @@ export function splitResumeIntoSections(rawText: string): KnowledgeSection[] {
   return groups.length > 0 ? groups : chunkText("Resume Overview", rawText);
 }
 
+/**
+ * Open-ended portfolio questions need enough professional evidence for Gemini to
+ * synthesize an answer instead of treating the knowledge base like a narrow FAQ.
+ * Private-profile sections are intentionally excluded from this baseline.
+ */
+const SAMAR_REASONING_BASELINE_TITLES = [
+  "Current Role",
+  "Current Client Project Work",
+  "Core Strengths",
+  "Career Status",
+  "Projects",
+  "Project Recommendations",
+  "Five-Year Vision",
+  "Education",
+  "Skills",
+  "Viewing Preferences",
+] as const;
+
+const SAMAR_REASONING_CONTEXT_LIMIT = 13;
+
+function uniqueSections(sections: KnowledgeSection[]): KnowledgeSection[] {
+  return Array.from(new Map(sections.map(section => [`${section.title}:${section.content}`, section])).values());
+}
+
+function samarReasoningBaseline(source: KnowledgeSection[]): KnowledgeSection[] {
+  return SAMAR_REASONING_BASELINE_TITLES.flatMap(title => {
+    const section = source.find(candidate => candidate.title === title);
+    return section ? [section] : [];
+  });
+}
+
 export function retrieveRelevantSections(
   scope: ChatScope,
   question: string,
@@ -353,7 +384,12 @@ export function retrieveRelevantSections(
   ].filter(pattern => pattern.test(question)).length;
   const effectiveLimit = scope === "samar" && projectCatalogQuestion
     ? Math.max(limit, source.length)
-    : Math.max(limit, experienceQuestion ? 6 : requestedCareerTopics > 1 ? requestedCareerTopics + 1 : limit);
+    : Math.max(
+      limit,
+      scope === "samar" ? SAMAR_REASONING_CONTEXT_LIMIT : 0,
+      experienceQuestion ? 6 : 0,
+      requestedCareerTopics > 1 ? requestedCareerTopics + 1 : 0,
+    );
 
   const ranked = source
     .map((section, index) => ({ section, index, score: scoreSection(section, question) }))
@@ -361,13 +397,25 @@ export function retrieveRelevantSections(
     .sort((a, b) => b.score - a.score || a.index - b.index)
     .map(item => item.section);
 
+  if (scope === "samar") {
+    const reasoningBaseline = samarReasoningBaseline(source);
+    const requiredExperienceSections = experienceQuestion
+      ? source.filter(section =>
+        ["Current Role", "Career Status", "Experience", "Current Client Project Work"].includes(section.title),
+      )
+      : [];
+
+    const topDirectMatches = ranked.slice(0, 3);
+    return uniqueSections([...requiredExperienceSections, ...topDirectMatches, ...reasoningBaseline, ...ranked])
+      .slice(0, effectiveLimit);
+  }
+
   if (!experienceQuestion) return ranked.slice(0, effectiveLimit);
 
   const requiredExperienceSections = source.filter(section =>
     ["Current Role", "Career Status", "Experience", "Current Client Project Work"].includes(section.title),
   );
-  return Array.from(new Map([...requiredExperienceSections, ...ranked].map(section => [`${section.title}:${section.content}`, section])).values())
-    .slice(0, effectiveLimit);
+  return uniqueSections([...requiredExperienceSections, ...ranked]).slice(0, effectiveLimit);
 }
 
 export function buildGroundedSystemPrompt(scope: ChatScope, sections: KnowledgeSection[]): string {
@@ -379,12 +427,17 @@ export function buildGroundedSystemPrompt(scope: ChatScope, sections: KnowledgeS
   const context = sections.length > 0
     ? sections.map((section, index) => `[#${index + 1} | ${section.title}]\n${section.content}`).join("\n\n")
     : "No relevant source passages were retrieved.";
+  const groundingRule = scope === "samar"
+    ? `For Samar mode, treat open-ended questions as requests for a grounded synthesis of Samar's professional profile, rather than as a strict database lookup. Connect the question to the retrieved evidence about my work, skills, projects, education, strengths, or career direction whenever a reasonable answer can be supported. For questions that ask for judgement or explanation—such as what makes me a good AI engineer, how I approach a problem, or why I may suit a role—state the supported evidence and make the reasoning clear. You may use cautious framing such as "Based on my background" when an answer is an interpretation rather than a directly stated fact.
+
+Do not respond that my profile "does not provide information" or that you "do not have information" when the retrieved passages support a useful, good-faith answer. Instead, synthesize from those passages. Never turn a reasonable synthesis into an unsupported personal claim: do not invent jobs, employers, dates, awards, motivations, preferences, project results, seniority, or private details. If a question is clearly unrelated to Samar or asks for a private detail that is not supplied, briefly state that this assistant focuses on my portfolio and professional background, then invite a relevant question.`
+    : "Use only the reference passages supplied below. You may interpret a naturally phrased, paraphrased, or typo-containing question by its likely intent, but only answer with facts explicitly supported by the retrieved passages. If the answer is not explicitly supported, say that the selected resume does not provide that information. Do not infer, invent, or merge facts from any other source. Give direct answers to the question rather than substituting a nearby but different fact.";
 
   return `You are a grounded portfolio assistant. You answer questions using exactly one source: ${sourceLabel}.
 
 ${voiceRule}
 
-Use only the reference passages supplied below. You may interpret a naturally phrased, paraphrased, or typo-containing question by its likely intent, but only answer with facts explicitly supported by the retrieved passages. If the answer is not explicitly supported, say that the selected resume/profile does not provide that information. Do not infer, invent, or merge facts from any other source. Give direct answers to the question rather than substituting a nearby but different fact.
+Use only the reference passages supplied below. You may interpret a naturally phrased, paraphrased, or typo-containing question by its likely intent. ${groundingRule}
 
 Formatting rule: For every substantive answer, use Markdown bullet points only. Start every non-empty answer line with "- "; do not write prose paragraphs, introductions, or conclusions outside the bullets. Keep each bullet concise and factual. The only exception is a simple greeting, which may remain a single short sentence.
 
