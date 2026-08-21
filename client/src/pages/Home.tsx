@@ -10,6 +10,7 @@ import {
   ClipboardCheck,
   CheckCircle2,
   FileText,
+  Github,
   Loader2,
   LockKeyhole,
   Trash2,
@@ -261,7 +262,12 @@ export default function Home() {
             </div>
             <h1 className="max-w-3xl font-serif text-3xl font-semibold tracking-[-0.05em] text-[#fff3ea] sm:text-5xl">A conversation, grounded in my work.</h1>
           </div>
-          <div className="flex items-center gap-2 text-sm text-[#d8a99d]"><LockKeyhole className="size-4 text-[#ff8068]" /> Gemini runs server-side. Sources stay scoped.</div>
+          <div className="flex flex-col gap-2 text-sm text-[#d8a99d] sm:items-end">
+            <a href="https://github.com/Samarssj/personal-rag-bot" target="_blank" rel="noreferrer" className="inline-flex w-fit items-center gap-2 rounded-lg border border-[#a94940]/70 bg-[#260f11] px-3 py-1.5 text-xs font-semibold text-[#ffe0d1] transition-colors hover:bg-[#4a191b] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff8068]">
+              <Github className="size-3.5" /> View this project on GitHub
+            </a>
+            <span className="flex items-center gap-2"><LockKeyhole className="size-4 text-[#ff8068]" /> Gemini runs server-side. Sources stay scoped.</span>
+          </div>
         </header>
 
         <section className="mb-7 grid overflow-hidden rounded-[2rem] border border-[#9f3b36]/55 bg-[#1a0b0c] shadow-[0_30px_80px_-38px_rgba(225,42,35,0.76)] sm:grid-cols-[1fr_auto]">

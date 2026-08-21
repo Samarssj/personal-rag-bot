@@ -122,14 +122,17 @@ describe("resume RAG retrieval", () => {
     expect(result?.answer.split("\n").every(line => line.startsWith("- "))).toBe(true);
   });
 
-  it("returns the exact verified portfolio and resume links for direct requests", () => {
+  it("returns the exact verified professional links for direct requests", () => {
     expect(profileLinkAnswer("Can I see your portfolio?")).toMatchObject({
-      title: "Portfolio and Resume Links",
+      title: "Professional Links",
       answer: expect.stringContaining("https://samar-portfolio1.vercel.app"),
     });
     expect(profileLinkAnswer("Could you share your resume or CV?")?.answer).toContain(
       "https://drive.google.com/file/d/1ygq4aSNoREhRY-VxNdygpeVU2-_NCUVX/view?usp=drivesdk",
     );
+    expect(profileLinkAnswer("Can you share your LinkedIn link?")?.answer).toContain("https://in.linkedin.com/in/samarssj");
+    expect(profileLinkAnswer("What is your GitHub profile?")?.answer).toContain("https://github.com/Samarssj");
+    expect(profileLinkAnswer("Show your GitHub projects")).toBeNull();
   });
 
   it("returns all nine verified certifications and detects complete project catalog requests", () => {

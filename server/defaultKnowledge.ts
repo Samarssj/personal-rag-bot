@@ -11,6 +11,8 @@ export const FAVORITE_SERIES_ANSWER = "- **Dark** — A German science-fiction m
 
 export const RESUME_DOWNLOAD_URL = "https://drive.google.com/file/d/1ygq4aSNoREhRY-VxNdygpeVU2-_NCUVX/view?usp=drivesdk";
 export const PORTFOLIO_URL = "https://samar-portfolio1.vercel.app";
+export const LINKEDIN_URL = "https://in.linkedin.com/in/samarssj";
+export const GITHUB_PROFILE_URL = "https://github.com/Samarssj";
 
 export const CERTIFICATION_CATALOG_ANSWER = "- **IBM Machine Learning Professional Certificate** — IBM — https://coursera.org/share/4d0f5b448eb9bf8b202cfcd075bf925b\n- **IBM AI Enterprise Workflow Specialization** — IBM — https://coursera.org/share/b0e3b089723ce42f0aa3308a38d36f1e\n- **AI for Scientific Research Specialization** — Coursera — https://coursera.org/share/b14960a82bbb4a4e70b912c1141a92c6\n- **Deploy, Monitor and Evaluate Production-ready CX Agents** — Google Cloud — https://partner.skills.google/public_profiles/e2bb2abb-fb8a-4b51-882e-744f692fa177/badges/25211213\n- **Certified Partner Specialist Gemini Enterprise Agent Development** — Google Cloud — https://www.credly.com/badges/2533a1d5-c98b-4102-b1f6-c73c983da84b/public_url\n- **Analyze Patterns in Conversational Data with Conversational Insights** — Google Cloud — https://partner.skills.google/public_profiles/e2bb2abb-fb8a-4b51-882e-744f692fa177/badges/24844323\n- **Build Generative Virtual Agents with API Integrations** — Google Cloud — https://partner.skills.google/public_profiles/e2bb2abb-fb8a-4b51-882e-744f692fa177/badges/24653285\n- **Leverage Best Practices for Developing, Operating, and Securing Production-grade Conversational Agents** — Google Cloud — https://partner.skills.google/public_profiles/e2bb2abb-fb8a-4b51-882e-744f692fa177/badges/24831789\n- **Certified Partner Specialist Gemini Enterprise Deployment** — Google Cloud — https://www.credly.com/badges/f0de046e-1a43-4e03-9393-2f8e69f4e5d9/public_url";
 
@@ -22,7 +24,7 @@ export const SAMAR_KNOWLEDGE_BASE: KnowledgeSection[] = [
   {
     title: "Profile",
     content:
-      "My name is Samar Satnam Singh. My email is ssjsamar453@gmail.com and my phone number is 6006641436. My LinkedIn profile is SamarSingh and my GitHub profile is Samarssj.",
+      `My name is Samar Satnam Singh. My email is ssjsamar453@gmail.com and my phone number is 6006641436. My LinkedIn profile is ${LINKEDIN_URL} and my GitHub profile is ${GITHUB_PROFILE_URL}.`,
   },
   {
     title: "Contact",

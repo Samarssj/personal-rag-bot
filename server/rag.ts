@@ -1,4 +1,4 @@
-import { CERTIFICATION_CATALOG_ANSWER, FAVORITE_ANIME_ANSWER, FAVORITE_MOVIES_ANSWER, FAVORITE_SERIES_ANSWER, PORTFOLIO_URL, RESUME_DOWNLOAD_URL, SAMAR_KNOWLEDGE_BASE, type KnowledgeSection } from "./defaultKnowledge";
+import { CERTIFICATION_CATALOG_ANSWER, FAVORITE_ANIME_ANSWER, FAVORITE_MOVIES_ANSWER, FAVORITE_SERIES_ANSWER, GITHUB_PROFILE_URL, LINKEDIN_URL, PORTFOLIO_URL, RESUME_DOWNLOAD_URL, SAMAR_KNOWLEDGE_BASE, type KnowledgeSection } from "./defaultKnowledge";
 
 export type ChatScope = "samar" | "uploaded";
 
@@ -52,13 +52,18 @@ export function profileLinkAnswer(question: string): { title: string; answer: st
   const normalized = question.toLocaleLowerCase();
   const asksForResume = /\b(?:resume|cv)\b/.test(normalized);
   const asksForPortfolio = /\bportfolio\b/.test(normalized);
+  const asksForLinkedIn = /\b(?:linkedin|linked\s*in)\b/.test(normalized);
+  const asksForGitHubProfile = /\bgithub\b/.test(normalized)
+    && !/\b(?:projects?|repositories|repos)\b/.test(normalized);
   const links = [
     asksForPortfolio ? `- **My portfolio website:** ${PORTFOLIO_URL}` : null,
     asksForResume ? `- **Download my resume:** ${RESUME_DOWNLOAD_URL}` : null,
+    asksForLinkedIn ? `- **My LinkedIn:** ${LINKEDIN_URL}` : null,
+    asksForGitHubProfile ? `- **My GitHub:** ${GITHUB_PROFILE_URL}` : null,
   ].filter((link): link is string => Boolean(link));
 
   if (links.length === 0) return null;
-  return { title: "Portfolio and Resume Links", answer: links.join("\n") };
+  return { title: "Professional Links", answer: links.join("\n") };
 }
 
 /** Returns every verified certification and credential link without model-side truncation. */
