@@ -14,6 +14,7 @@ import { createInMemoryResumeSession, deleteInMemoryResumeSession, getInMemoryRe
 
 const UPLOAD_TTL_MS = 4 * 60 * 60 * 1000;
 const MAX_HISTORY_MESSAGES = 8;
+export const PORTFOLIO_CHAT_TEMPERATURE = 1;
 
 type ClientMessage = { role: "user" | "assistant"; content: string };
 
@@ -335,7 +336,7 @@ export function registerResumeRagRoutes(app: Express) {
         answer = await generateGeminiText({
           systemPrompt,
           messages: [...history, { role: "user", content: question }],
-          temperature: 0.8,
+          temperature: PORTFOLIO_CHAT_TEMPERATURE,
           maxOutputTokens: asksForProjectCatalog || asksForCredentialCatalog
             ? 2_200
             : asksForExperience || asksForCareerProfile || scope === "samar"

@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { combineFriendlyAndVerifiedAnswer, extractGeminiDelta, removeRepeatedVerifiedCatalogEntries, splitSseFrames, verifiedDetailsFallback, verifiedPersonalFactDetails, visitorChatError } from "./resumeHttp";
+import { combineFriendlyAndVerifiedAnswer, extractGeminiDelta, PORTFOLIO_CHAT_TEMPERATURE, removeRepeatedVerifiedCatalogEntries, splitSseFrames, verifiedDetailsFallback, verifiedPersonalFactDetails, visitorChatError } from "./resumeHttp";
 
 describe("Gemini stream framing", () => {
+  it("uses temperature 1.0 for friendly portfolio chat responses", () => {
+    expect(PORTFOLIO_CHAT_TEMPERATURE).toBe(1);
+  });
+
   it("preserves every CRLF-delimited provider frame instead of keeping only the first chunk", () => {
     const first = 'data: {"choices":[{"delta":{"content":"- First complete fact."}}]}';
     const second = 'data: {"choices":[{"delta":{"content":"\\n- Second complete fact."}}]}';
