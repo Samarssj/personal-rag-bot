@@ -9,6 +9,17 @@ export function isGreetingOnly(question: string): boolean {
   return GREETING_ONLY_PATTERN.test(question.trim());
 }
 
+/** Returns Samar's exact fixed hometown for natural and abbreviated location prompts. */
+export function hometownAnswer(question: string): { title: string; answer: string } | null {
+  const normalized = question.toLocaleLowerCase().replace(/[^a-z\s]/g, " ").replace(/\s+/g, " ").trim();
+  const asksForHometown = /\b(?:hometown|home town)\b/.test(normalized)
+    || /\b(?:where|wher|wer)\s+(?:r|are)\s+(?:u|yu|you)\s+(?:from|frm|based|live)\b/.test(normalized)
+    || /\b(?:where|wher|wer)\b.*\b(?:from|frm|based|live)\b/.test(normalized);
+
+  if (!asksForHometown) return null;
+  return { title: "Hometown", answer: "- **Hometown:** I am from Jammu, India, in Jammu & Kashmir." };
+}
+
 /** Normalizes a substantive response into concise Markdown bullets, regardless of model formatting. */
 export function formatAsBulletList(answer: string): string {
   const lines = answer

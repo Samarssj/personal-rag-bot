@@ -6,7 +6,7 @@ import { SAMAR_KNOWLEDGE_BASE, type KnowledgeSection } from "./defaultKnowledge"
 import { formatProjectCatalog, getGitHubProjects, projectKnowledgeSections } from "./github";
 import { generateGeminiText } from "./geminiDirect";
 import { createJobMatch, formatJobMatchMarkdown } from "./jobMatch";
-import { buildGroundedSystemPrompt, certificationCatalogAnswer, detailedExperienceAnswer, favoriteMediaAnswer, formatAsBulletList, isGreetingOnly, profileLinkAnswer, requestsProjectCatalog, retrieveRelevantSections, sourceLabels, splitResumeIntoSections, type ChatScope } from "./rag";
+import { buildGroundedSystemPrompt, certificationCatalogAnswer, detailedExperienceAnswer, favoriteMediaAnswer, formatAsBulletList, hometownAnswer, isGreetingOnly, profileLinkAnswer, requestsProjectCatalog, retrieveRelevantSections, sourceLabels, splitResumeIntoSections, type ChatScope } from "./rag";
 import { DEFAULT_PORTFOLIO_PROFILE, profileKnowledgeSection } from "./profile";
 import { extractResumeText, MAX_RESUME_BYTES, validateResumeUpload } from "./resumeProcessing";
 import { createInMemoryResumeSession, deleteInMemoryResumeSession, getInMemoryResumeSession, pruneExpiredResumeSessions } from "./resumeSessionStore";
@@ -158,6 +158,22 @@ export function registerResumeRagRoutes(app: Express) {
         sendSse(res, "token", {
           delta: scope === "samar" ? "Hi — I’m Samar. What would you like to know?" : "Hi — what would you like to know about this resume?",
         });
+        sendSse(res, "done", { ok: true });
+        return res.end();
+      }
+
+      const directHometown = scope === "samar" ? hometownAnswer(question) : null;
+      if (directHometown) {
+        res.status(200);
+        res.set({
+          "Cache-Control": "no-cache, no-transform",
+          Connection: "keep-alive",
+          "Content-Type": "text/event-stream",
+          "X-Accel-Buffering": "no",
+        });
+        res.flushHeaders();
+        sendSse(res, "sources", { labels: [directHometown.title] });
+        sendSse(res, "token", { delta: directHometown.answer });
         sendSse(res, "done", { ok: true });
         return res.end();
       }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildGroundedSystemPrompt, certificationCatalogAnswer, detailedExperienceAnswer, favoriteMediaAnswer, formatAsBulletList, isGreetingOnly, profileLinkAnswer, requestsProjectCatalog, retrieveRelevantSections, sourceLabels, splitResumeIntoSections } from "./rag";
+import { buildGroundedSystemPrompt, certificationCatalogAnswer, detailedExperienceAnswer, favoriteMediaAnswer, formatAsBulletList, hometownAnswer, isGreetingOnly, profileLinkAnswer, requestsProjectCatalog, retrieveRelevantSections, sourceLabels, splitResumeIntoSections } from "./rag";
 import { validateResumeUpload } from "./resumeProcessing";
 import { hasMatchingDeleteToken, hashDeleteToken } from "./sessionSecurity";
 
@@ -38,6 +38,13 @@ describe("resume RAG retrieval", () => {
     const sources = retrieveRelevantSections("samar", "What is your height?");
 
     expect(sources.some(source => source.title === "Personal Facts" && source.content.includes("6 feet"))).toBe(true);
+  });
+
+  it.each(["Where are you from?", "where r yu from", "where r u frm", "Where are you based?"])("returns the exact hometown for abbreviated location prompt: %s", question => {
+    const result = hometownAnswer(question);
+
+    expect(result).toMatchObject({ title: "Hometown" });
+    expect(result?.answer).toContain("Jammu, India");
   });
 
   it("retrieves Samar’s explicit contact email when asked how to get in touch", () => {
