@@ -7,7 +7,7 @@ import { formatProjectCatalog, getGitHubProjects, projectKnowledgeSections } fro
 import { generateGeminiText } from "./geminiDirect";
 import { createJobMatch, formatJobMatchMarkdown } from "./jobMatch";
 import { getLivePortfolioRefresh } from "./portfolioSource";
-import { buildGroundedSystemPrompt, certificationCatalogAnswer, detailedExperienceAnswer, favoriteMediaAnswer, formatAsBulletList, hometownAnswer, isGreetingOnly, profileLinkAnswer, requestsProjectCatalog, retrieveRelevantSections, sourceLabels, splitResumeIntoSections, type ChatScope } from "./rag";
+import { buildGroundedSystemPrompt, certificationCatalogAnswer, detailedExperienceAnswer, favoriteMediaAnswer, formatAsBulletList, fullStackProjectRecommendationAnswer, hometownAnswer, isGreetingOnly, profileLinkAnswer, requestsProjectCatalog, retrieveRelevantSections, sourceLabels, splitResumeIntoSections, type ChatScope } from "./rag";
 import { calculateAge, DEFAULT_PORTFOLIO_PROFILE, formatBirthDate, profileKnowledgeSection } from "./profile";
 import { extractResumeText, MAX_RESUME_BYTES, validateResumeUpload } from "./resumeProcessing";
 import { createInMemoryResumeSession, deleteInMemoryResumeSession, getInMemoryResumeSession, pruneExpiredResumeSessions } from "./resumeSessionStore";
@@ -255,6 +255,7 @@ export function registerResumeRagRoutes(app: Express) {
       const directHometown = scope === "samar" ? hometownAnswer(question) : null;
       const directExperience = scope === "samar" ? detailedExperienceAnswer(question) : null;
       const directFavoriteMedia = scope === "samar" ? favoriteMediaAnswer(question) : null;
+      const directFullStackRecommendation = scope === "samar" ? fullStackProjectRecommendationAnswer(question) : null;
       const directProfileLink = scope === "samar" ? profileLinkAnswer(question) : null;
       const directCertificationCatalog = scope === "samar" ? certificationCatalogAnswer(question) : null;
       const asksForVerifiedProjectCatalog = scope === "samar" && requestsProjectCatalog(question);
@@ -262,6 +263,7 @@ export function registerResumeRagRoutes(app: Express) {
       if (directHometown) verifiedDetails.push({ ...directHometown, appendAfterFriendlyAnswer: true });
       if (directExperience) verifiedDetails.push({ ...directExperience, appendAfterFriendlyAnswer: true });
       if (directFavoriteMedia) verifiedDetails.push({ ...directFavoriteMedia, appendAfterFriendlyAnswer: true });
+      if (directFullStackRecommendation) verifiedDetails.push({ ...directFullStackRecommendation, appendAfterFriendlyAnswer: true });
       verifiedDetails.push(...(scope === "samar" ? verifiedPersonalFactDetails(question) : []));
 
       if (directProfileLink || directCertificationCatalog) {
@@ -304,7 +306,7 @@ export function registerResumeRagRoutes(app: Express) {
         samarSections = [profileKnowledgeSection(profile), ...projectSections, ...SAMAR_KNOWLEDGE_BASE];
       }
 
-      const asksForProjectCatalog = scope === "samar" && /\b(github|repo|repository|repositories|project|projects)\b/i.test(question);
+      const asksForProjectCatalog = scope === "samar" && requestsProjectCatalog(question);
       const asksForCredentialCatalog = scope === "samar" && /\b(certification|certifications|credential|credentials|badge|badges)\b/i.test(question);
       const asksForCareerProfile = scope === "samar" && /\b(core strengths?|preferred roles?|work preferences?|current client (?:work|project)|scrapy)\b/i.test(question);
       const asksForExperience = scope === "samar" && /\b(?:experience|experince|career|professional journey|work history|work background|internship|internships)\b/i.test(question);

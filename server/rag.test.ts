@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildGroundedSystemPrompt, certificationCatalogAnswer, detailedExperienceAnswer, favoriteMediaAnswer, formatAsBulletList, hometownAnswer, isGreetingOnly, profileLinkAnswer, requestsProjectCatalog, retrieveRelevantSections, sourceLabels, splitResumeIntoSections } from "./rag";
+import { buildGroundedSystemPrompt, certificationCatalogAnswer, detailedExperienceAnswer, favoriteMediaAnswer, formatAsBulletList, fullStackProjectRecommendationAnswer, hometownAnswer, isGreetingOnly, profileLinkAnswer, requestsProjectCatalog, retrieveRelevantSections, sourceLabels, splitResumeIntoSections } from "./rag";
 import { validateResumeUpload } from "./resumeProcessing";
 import { hasMatchingDeleteToken, hashDeleteToken } from "./sessionSecurity";
 
@@ -100,6 +100,17 @@ describe("resume RAG retrieval", () => {
     expect(result?.answer.split("\n")).toHaveLength(5);
   });
 
+  it("returns both verified full-stack project recommendations for a best-project question", () => {
+    const result = fullStackProjectRecommendationAnswer("What are your best full stack projects?");
+
+    expect(result?.title).toBe("Recommended Full-Stack Projects");
+    expect(result?.answer).toContain("eBlogging-webapp");
+    expect(result?.answer).toContain("Step-Pulse");
+    expect(result?.answer).toContain("https://step-pulse.vercel.app");
+    expect(fullStackProjectRecommendationAnswer("What are your best AI projects?")).toBeNull();
+    expect(requestsProjectCatalog("What are your best full stack projects?")).toBe(false);
+  });
+
   it("retrieves every requested career-preference section for a combined question", () => {
     const sources = retrieveRelevantSections(
       "samar",
@@ -195,7 +206,7 @@ describe("resume RAG retrieval", () => {
     ["What is your hometown?", "Personal Facts", "Jammu, India"],
     ["What are your best AI projects?", "Project Recommendations", "News Pilot and Jarvis-prototype"],
     ["What is your best ML project?", "Project Recommendations", "Credit-Guard"],
-    ["What is your best MERN stack project?", "Project Recommendations", "eBlogging-webapp"],
+    ["What are your best full stack projects?", "Project Recommendations", "eBlogging-webapp and Step-Pulse"],
     ["What are your favorite series?", "Favorite Series and Music", "Dark as my top favorite"],
     ["What are your top songs?", "Favorite Series and Music", "Hotel Drive"],
     ["What do you like to watch?", "Viewing Preferences", "psychological mysteries"],
@@ -249,6 +260,7 @@ describe("resume RAG retrieval", () => {
     expect(prompt).toContain("Chitkara University, Punjab");
     expect(prompt).toContain("fresher with two internships");
     expect(prompt).toContain("News Pilot and Jarvis-prototype for AI");
+    expect(prompt).toContain("eBlogging-webapp plus Step-Pulse for full-stack or MERN-stack work");
     expect(prompt).toContain("Favorite Anime or Favorite Movies passage");
     expect(prompt).toContain("use Markdown bullet points only");
     expect(prompt).toContain("exact GitHub repository URL");

@@ -93,8 +93,23 @@ export function detailedExperienceAnswer(question: string): { title: string; ans
   return { title: "Professional Experience", answer: DETAILED_EXPERIENCE_ANSWER };
 }
 
+/** Preserves both of Samar's chosen full-stack recommendations after Gemini's conversational framing. */
+export function fullStackProjectRecommendationAnswer(question: string): { title: string; answer: string } | null {
+  const normalized = question.toLocaleLowerCase();
+  const asksForRecommendation = /\b(?:best|recommend|recommendation|top|featured)\b/.test(normalized);
+  const asksForFullStack = /\b(?:full[ -]?stack|mern)\b/.test(normalized);
+  if (!asksForRecommendation || !asksForFullStack) return null;
+
+  return {
+    title: "Recommended Full-Stack Projects",
+    answer: "- **eBlogging-webapp** — A TypeScript web application with JWT-based authentication. GitHub: https://github.com/Samarssj/eBlogging-webapp. Live project: https://eblogging-webapp-1.onrender.com.\n- **Step-Pulse** — A fitness-tracking application with Firebase, Gemini-based coaching, and real-time step logging. GitHub: https://github.com/Samarssj/step-pulse. Live project: https://step-pulse.vercel.app.",
+  };
+}
+
 /** Identifies visitor requests for the complete GitHub project catalog rather than one named project. */
 export function requestsProjectCatalog(question: string): boolean {
+  const requestsCategoryRecommendation = /\b(?:best|top|recommended|recommendation)\b[\s\S]{0,60}\b(?:ai|ml|machine\s+learning|mern|full[ -]?stack)\b/i.test(question);
+  if (requestsCategoryRecommendation) return false;
   return /\b(?:all\s+)?(?:github\s+)?(?:projects|repositories|repos)\b/i.test(question)
     || /\b(?:show|list|tell|talk)\b[^.?!]{0,40}\b(?:my|your)\s+projects?\b/i.test(question);
 }
@@ -460,7 +475,7 @@ Formatting rule: For every substantive answer, use Markdown bullet points only. 
 
 	If asked for contact information, give the exact email address from the Contact or Profile passage and do not invent alternate contact details.
 
-	If asked for my best projects by category, use the Project Recommendations passage: News Pilot and Jarvis-prototype for AI, Credit-Guard for machine learning, and eBlogging-webapp for MERN stack. Only share personal entertainment preferences, future goals, pronouns, or sexual orientation when the question directly asks for them. For direct questions about what I like to watch, use the Viewing Preferences passage. For direct favorite-anime or favorite-movie questions, name every relevant title in the retrieved Favorite Anime or Favorite Movies passage and include the short descriptions from that passage when requested. If asked whether I am gay, answer from the Personal Identity passage that I am straight; do not claim the profile lacks this information when that passage is retrieved.
+		If asked for my best projects by category, use the Project Recommendations passage: News Pilot and Jarvis-prototype for AI, Credit-Guard for machine learning, and eBlogging-webapp plus Step-Pulse for full-stack or MERN-stack work. Only share personal entertainment preferences, future goals, pronouns, or sexual orientation when the question directly asks for them. For direct questions about what I like to watch, use the Viewing Preferences passage. For direct favorite-anime or favorite-movie questions, name every relevant title in the retrieved Favorite Anime or Favorite Movies passage and include the short descriptions from that passage when requested. If asked whether I am gay, answer from the Personal Identity passage that I am straight; do not claim the profile lacks this information when that passage is retrieved.
 
 	If asked about a project, always preserve the exact GitHub repository URL from its retrieved GitHub Project passage. Include the exact Live project URL whenever that passage supplies one. If asked to list GitHub projects, repositories, or all projects, return every retrieved GitHub Project name in a concise bulleted list, with its GitHub URL and available live URL. Do not silently omit retrieved project names or supplied URLs and do not invent project names or links.
 

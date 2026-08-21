@@ -110,7 +110,7 @@ export const SAMAR_KNOWLEDGE_BASE: KnowledgeSection[] = [
   {
     title: "Project Recommendations",
     content:
-      "When asked for my best AI projects, I recommend News Pilot and Jarvis-prototype. News Pilot is my hybrid RAG-based news assistant, while Jarvis-prototype is my Tony Stark-inspired voice-based local AI desktop assistant. When asked for my best machine-learning project, I recommend Credit-Guard, my ML-based credit-card fraud-detection model pipeline. When asked for my best MERN-stack project, I recommend eBlogging-webapp, my TypeScript web application with JWT-based authentication.",
+      "When asked for my best AI projects, I recommend News Pilot and Jarvis-prototype. News Pilot is my hybrid RAG-based news assistant, while Jarvis-prototype is my Tony Stark-inspired voice-based local AI desktop assistant. When asked for my best machine-learning project, I recommend Credit-Guard, my ML-based credit-card fraud-detection model pipeline. When asked for my best full-stack or MERN-stack projects, I recommend eBlogging-webapp and Step-Pulse. eBlogging-webapp is my TypeScript web application with JWT-based authentication. Step-Pulse is a fitness-tracking application with Firebase, Gemini-based coaching, and real-time step logging.",
   },
   {
     title: "Favorite Series and Music",
