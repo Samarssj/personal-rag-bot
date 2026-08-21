@@ -127,7 +127,7 @@ The repository includes a ready-to-use [`render.yaml`](./render.yaml).
 
 1. Push the project to GitHub.
 2. In Render, select **New → Blueprint** and choose this repository. Alternatively, choose **New → Web Service**.
-3. Set `GEMINI_API_KEY` in the service’s **Environment** section.
+3. Set `GEMINI_API_KEY` in the service’s **Environment** section. Add an optional server-only `GITHUB_TOKEN` if visitors will frequently request the complete project catalog.
 4. Render uses the following configuration automatically:
 
 | Setting | Value |
@@ -166,7 +166,7 @@ render.yaml             Render service configuration
 ## Important Operational Notes
 
 - Resume sessions are intentionally **temporary**. They are unavailable after a Render restart or redeploy.
-- Public GitHub repositories are fetched at query time. The verified project fallback preserves useful project answers during temporary GitHub API rate limits.
+- Public GitHub repositories are fetched live whenever a visitor requests the complete project catalog, so a newly public repository is included without redeployment. Add a server-only `GITHUB_TOKEN` in Render to make frequent refreshes more resilient to GitHub API rate limits; the verified fallback preserves useful answers if GitHub is temporarily unavailable.
 - The fixed portfolio information lives in [`server/defaultKnowledge.ts`](./server/defaultKnowledge.ts), making it simple to review or update.
 
 ---

@@ -55,18 +55,20 @@ function cacheFallback(username: string) {
   return projects;
 }
 
-export async function getGitHubProjects(username: string): Promise<GitHubProject[]> {
+export async function getGitHubProjects(username: string, options: { forceRefresh?: boolean } = {}): Promise<GitHubProject[]> {
   const normalizedUsername = username.trim();
   const cached = cache.get(normalizedUsername.toLocaleLowerCase());
-  if (cached && cached.expiresAt > Date.now()) return cached.projects;
+  if (!options.forceRefresh && cached && cached.expiresAt > Date.now()) return cached.projects;
 
   try {
+    const githubToken = process.env.GITHUB_TOKEN?.trim();
     const response = await fetch(
       `https://api.github.com/users/${encodeURIComponent(normalizedUsername)}/repos?per_page=100&sort=updated&direction=desc`,
       {
         headers: {
           Accept: "application/vnd.github+json",
           "User-Agent": "Samar-Portfolio-AI",
+          ...(githubToken ? { Authorization: `Bearer ${githubToken}` } : {}),
         },
       },
     );

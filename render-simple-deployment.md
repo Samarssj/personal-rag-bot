@@ -44,7 +44,7 @@ The application has already been converted for this deployment model:
 4. Managed OAuth, storage, database, and RPC routes have been removed from the production runtime.
 5. The portrait now loads from Samar’s existing public portfolio asset.
 
-**The only required secret is `GEMINI_API_KEY`.** A `GITHUB_TOKEN` remains optional if you want to avoid GitHub API rate limits when refreshing the project catalog.
+**The only required secret is `GEMINI_API_KEY`.** Add an optional server-only `GITHUB_TOKEN` if you want frequent live project-catalog refreshes to avoid GitHub API rate limits.
 
 ## Render Dashboard Settings
 

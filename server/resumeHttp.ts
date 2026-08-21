@@ -227,7 +227,7 @@ export function registerResumeRagRoutes(app: Express) {
       }
 
       if (scope === "samar" && requestsProjectCatalog(question)) {
-        const projects = await getGitHubProjects(DEFAULT_PORTFOLIO_PROFILE.githubUsername);
+        const projects = await getGitHubProjects(DEFAULT_PORTFOLIO_PROFILE.githubUsername, { forceRefresh: true });
         res.status(200);
         res.set({
           "Cache-Control": "no-cache, no-transform",

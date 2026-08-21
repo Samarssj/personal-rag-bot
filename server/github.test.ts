@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { FALLBACK_GITHUB_PROJECTS, formatProjectCatalog, projectKnowledgeSections } from "./github";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { FALLBACK_GITHUB_PROJECTS, formatProjectCatalog, getGitHubProjects, projectKnowledgeSections } from "./github";
+
+const originalFetch = global.fetch;
+
+afterEach(() => {
+  global.fetch = originalFetch;
+  delete process.env.GITHUB_TOKEN;
+});
 
 describe("GitHub project knowledge", () => {
   it("preserves verified repository and live-demo links in the fallback catalog", () => {
@@ -30,5 +38,32 @@ describe("GitHub project knowledge", () => {
     expect(catalog).toContain("**GitHub:** https://github.com/Samarssj/NewsPilot");
     expect(catalog).toContain("**Live project:** https://samarssj-newspilot-app-qbihoh.streamlit.app/");
     expect(catalog).toContain("**Black-Jack**");
+  });
+
+  it("forces a live GitHub refresh for complete project-catalog requests", async () => {
+    process.env.GITHUB_TOKEN = "test-github-token";
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => [{
+        name: "newly-published-project",
+        description: "A freshly published project.",
+        html_url: "https://github.com/Samarssj/newly-published-project",
+        homepage: null,
+        language: "TypeScript",
+        updated_at: "2026-08-21T00:00:00Z",
+        stargazers_count: 0,
+        fork: false,
+        archived: false,
+      }],
+    });
+    global.fetch = fetchMock as typeof fetch;
+
+    const projects = await getGitHubProjects("Samarssj", { forceRefresh: true });
+
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
+      headers: expect.objectContaining({ Authorization: "Bearer test-github-token" }),
+    });
+    expect(projects).toMatchObject([{ name: "newly-published-project" }]);
   });
 });
