@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cacheSamarChatResponse, clearSamarChatResponseCache, combineFriendlyAndVerifiedAnswer, extractGeminiDelta, getCachedSamarChatResponse, PORTFOLIO_CHAT_TEMPERATURE, removeRepeatedVerifiedCatalogEntries, SAMAR_CHAT_CACHE_TTL_MS, samarChatCacheKey, splitSseFrames, verifiedDetailsFallback, verifiedPersonalFactDetails, visitorChatError } from "./resumeHttp";
+import { cacheSamarChatResponse, clearSamarChatResponseCache, combineFriendlyAndVerifiedAnswer, extractGeminiDelta, getCachedSamarChatResponse, needsLiveGitHubProjectKnowledge, PORTFOLIO_CHAT_TEMPERATURE, removeRepeatedVerifiedCatalogEntries, SAMAR_CHAT_CACHE_TTL_MS, samarChatCacheKey, splitSseFrames, verifiedDetailsFallback, verifiedPersonalFactDetails, visitorChatError } from "./resumeHttp";
 
 describe("Gemini stream framing", () => {
   it("uses temperature 1.0 for friendly portfolio chat responses", () => {
@@ -18,6 +18,12 @@ describe("Gemini stream framing", () => {
       labels: ["Project Recommendations"],
     });
     expect(getCachedSamarChatResponse(key!, 1_000 + SAMAR_CHAT_CACHE_TTL_MS + 1)).toBeUndefined();
+  });
+
+  it("loads live GitHub project knowledge only for project-related prompts", () => {
+    expect(needsLiveGitHubProjectKnowledge("What makes you a good AI engineer?")).toBe(false);
+    expect(needsLiveGitHubProjectKnowledge("Tell me about Auto Apply")).toBe(true);
+    expect(needsLiveGitHubProjectKnowledge("Show your GitHub projects")).toBe(true);
   });
 
   it("preserves every CRLF-delimited provider frame instead of keeping only the first chunk", () => {

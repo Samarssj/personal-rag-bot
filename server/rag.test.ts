@@ -41,7 +41,7 @@ describe("resume RAG retrieval", () => {
       "Five-Year Vision",
       "Skills",
     ]));
-    expect(sources).toHaveLength(13);
+    expect(sources.length).toBeLessThanOrEqual(9);
   });
 
   it("retrieves the dedicated hobby fact when visitors ask about Samar’s hobbies", () => {

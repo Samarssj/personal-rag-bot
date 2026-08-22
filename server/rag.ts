@@ -362,14 +362,10 @@ const SAMAR_REASONING_BASELINE_TITLES = [
   "Core Strengths",
   "Career Status",
   "Projects",
-  "Project Recommendations",
-  "Five-Year Vision",
-  "Education",
   "Skills",
-  "Viewing Preferences",
 ] as const;
 
-const SAMAR_REASONING_CONTEXT_LIMIT = 13;
+const SAMAR_REASONING_CONTEXT_LIMIT = 9;
 
 function uniqueSections(sections: KnowledgeSection[]): KnowledgeSection[] {
   return Array.from(new Map(sections.map(section => [`${section.title}:${section.content}`, section])).values());
@@ -393,6 +389,7 @@ export function retrieveRelevantSections(
   const source = scope === "samar" ? samarSections : uploadedSections ?? [];
   const projectCatalogQuestion = /\b(github|repo|repository|repositories|project|projects)\b/i.test(question);
   const experienceQuestion = scope === "samar" && /\b(?:experience|experince|career|professional journey|work history|work background|internship|internships)\b/i.test(question);
+  const entertainmentQuestion = scope === "samar" && /\b(?:watch|anime|movie|movies|film|films|series|shows?|song|songs|music|track|tracks)\b/i.test(question);
   const requestedCareerTopics = [
     /\bcore strengths?\b/i,
     /\bpreferred roles?\b/i,
@@ -421,9 +418,12 @@ export function retrieveRelevantSections(
         ["Current Role", "Career Status", "Experience", "Current Client Project Work"].includes(section.title),
       )
       : [];
+    const requiredEntertainmentSections = entertainmentQuestion
+      ? source.filter(section => section.title === "Viewing Preferences")
+      : [];
 
-    const topDirectMatches = ranked.slice(0, 3);
-    return uniqueSections([...requiredExperienceSections, ...topDirectMatches, ...reasoningBaseline, ...ranked])
+    const topDirectMatches = ranked.slice(0, requestedCareerTopics > 1 ? requestedCareerTopics : 3);
+    return uniqueSections([...requiredExperienceSections, ...requiredEntertainmentSections, ...topDirectMatches, ...reasoningBaseline, ...ranked])
       .slice(0, effectiveLimit);
   }
 

@@ -4,7 +4,7 @@ import type { Express, Request, Response } from "express";
 import express from "express";
 import { SAMAR_KNOWLEDGE_BASE, type KnowledgeSection } from "./defaultKnowledge";
 import { formatProjectCatalog, getGitHubProjects, projectKnowledgeSections } from "./github";
-import { generateGeminiText } from "./geminiDirect";
+import { streamGeminiText } from "./geminiDirect";
 import { createJobMatch, formatJobMatchMarkdown } from "./jobMatch";
 import { getLivePortfolioRefresh } from "./portfolioSource";
 import { buildGroundedSystemPrompt, certificationCatalogAnswer, detailedExperienceAnswer, favoriteMediaAnswer, formatAsBulletList, fullStackProjectRecommendationAnswer, hometownAnswer, isGreetingOnly, profileLinkAnswer, requestsProjectCatalog, retrieveRelevantSections, sourceLabels, splitResumeIntoSections, type ChatScope } from "./rag";
@@ -17,6 +17,10 @@ const MAX_HISTORY_MESSAGES = 8;
 export const PORTFOLIO_CHAT_TEMPERATURE = 1;
 export const SAMAR_CHAT_CACHE_TTL_MS = 3 * 60 * 1000;
 const MAX_SAMAR_CHAT_CACHE_ENTRIES = 50;
+const NORMAL_SAMAR_CHAT_MAX_OUTPUT_TOKENS = 900;
+const DETAILED_SAMAR_CHAT_MAX_OUTPUT_TOKENS = 1_100;
+const NORMAL_SAMAR_CHAT_THINKING_LEVEL = "minimal" as const;
+const DETAILED_SAMAR_CHAT_THINKING_LEVEL = "low" as const;
 
 type ClientMessage = { role: "user" | "assistant"; content: string };
 type CachedSamarChatResponse = { answer: string; labels: string[]; expiresAt: number };
@@ -109,6 +113,11 @@ export function cacheSamarChatResponse(key: string, answer: string, labels: stri
 
 export function clearSamarChatResponseCache() {
   samarChatResponseCache.clear();
+}
+
+/** Live repository data is needed only when a visitor is explicitly exploring projects or their links. */
+export function needsLiveGitHubProjectKnowledge(question: string): boolean {
+  return /\b(?:github|repo(?:s|sitories)?|project(?:s)?|live\s+(?:demo|link|url)|source\s+code|news\s*pilot|jarvis|credit[\s-]?guard|auto[\s-]?apply|step[\s-]?pulse)\b/i.test(question);
 }
 
 export type VerifiedChatDetail = {
@@ -344,18 +353,20 @@ export function registerResumeRagRoutes(app: Express) {
       if (scope === "samar") {
         const profile = DEFAULT_PORTFOLIO_PROFILE;
         let projectSections: KnowledgeSection[] = [];
-        try {
-          const projects = await getGitHubProjects(profile.githubUsername, { forceRefresh: asksForVerifiedProjectCatalog });
-          projectSections = projectKnowledgeSections(projects);
-          if (asksForVerifiedProjectCatalog) {
-            verifiedDetails.push({
-              title: "GitHub Projects",
-              answer: formatProjectCatalog(projects),
-              appendAfterFriendlyAnswer: true,
-            });
+        if (needsLiveGitHubProjectKnowledge(question)) {
+          try {
+            const projects = await getGitHubProjects(profile.githubUsername, { forceRefresh: asksForVerifiedProjectCatalog });
+            projectSections = projectKnowledgeSections(projects);
+            if (asksForVerifiedProjectCatalog) {
+              verifiedDetails.push({
+                title: "GitHub Projects",
+                answer: formatProjectCatalog(projects),
+                appendAfterFriendlyAnswer: true,
+              });
+            }
+          } catch {
+            // A temporary GitHub API failure must not affect the permanent profile chat.
           }
-        } catch {
-          // A temporary GitHub API failure must not affect the permanent profile chat.
         }
         samarSections = [profileKnowledgeSection(profile), ...projectSections, ...SAMAR_KNOWLEDGE_BASE];
       }
@@ -382,19 +393,28 @@ export function registerResumeRagRoutes(app: Express) {
       res.flushHeaders();
       const labels = Array.from(new Set([...sourceLabels(sources), ...verifiedDetails.map(detail => detail.title)]));
       sendSse(res, "sources", { labels });
-      let answer: string;
+      let answer = "";
       try {
-        answer = await generateGeminiText({
+        for await (const delta of streamGeminiText({
           systemPrompt,
           messages: [...history, { role: "user", content: question }],
           temperature: PORTFOLIO_CHAT_TEMPERATURE,
+          thinkingLevel: asksForExperience || asksForCareerProfile
+            ? DETAILED_SAMAR_CHAT_THINKING_LEVEL
+            : NORMAL_SAMAR_CHAT_THINKING_LEVEL,
           maxOutputTokens: asksForProjectCatalog || asksForCredentialCatalog
             ? 2_200
-            : asksForExperience || asksForCareerProfile || scope === "samar"
-              ? 1_400
-              : 900,
-        });
+            : asksForExperience || asksForCareerProfile
+              ? DETAILED_SAMAR_CHAT_MAX_OUTPUT_TOKENS
+              : scope === "samar"
+                ? NORMAL_SAMAR_CHAT_MAX_OUTPUT_TOKENS
+                : 900,
+        })) {
+          answer += delta;
+          sendSse(res, "token", { delta });
+        }
       } catch (error) {
+        if (answer) throw error;
         const verifiedFallback = verifiedDetailsFallback(verifiedDetails);
         if (!verifiedFallback) throw error;
         sendSse(res, "token", { delta: verifiedFallback });
@@ -403,7 +423,6 @@ export function registerResumeRagRoutes(app: Express) {
       }
       const formattedAnswer = combineFriendlyAndVerifiedAnswer(answer, verifiedDetails);
       if (cacheKey) cacheSamarChatResponse(cacheKey, formattedAnswer, labels);
-      if (formattedAnswer) sendSse(res, "token", { delta: formattedAnswer });
       sendSse(res, "done", { ok: true });
       return res.end();
     } catch (error) {
