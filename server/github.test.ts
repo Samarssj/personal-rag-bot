@@ -22,6 +22,11 @@ describe("GitHub project knowledge", () => {
       url: "https://github.com/Samarssj/eBlogging-webapp",
       homepageUrl: "https://eblogging-webapp-1.onrender.com",
     });
+    expect(FALLBACK_GITHUB_PROJECTS.find(project => project.name === "Auto-Apply")).toMatchObject({
+      url: "https://github.com/Samarssj/Auto-Apply",
+      homepageUrl: "https://auto-apply-datn.onrender.com",
+      language: "TypeScript",
+    });
     expect(FALLBACK_GITHUB_PROJECTS.find(project => project.name === "step-pulse")).toMatchObject({
       url: "https://github.com/Samarssj/step-pulse",
       homepageUrl: "https://step-pulse.vercel.app",
