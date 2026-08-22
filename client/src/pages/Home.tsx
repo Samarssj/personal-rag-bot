@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import { LINKEDIN_PROFILE_URL, PERSONAL_RAG_REPOSITORY_URL } from "@/links";
+import { PROJECT_STACK_FILTERS } from "@/lib/projectStackFilters";
 import { toast } from "sonner";
 import {
   Bot,
@@ -57,6 +58,7 @@ export default function Home() {
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [session, setSession] = useState<SessionDetails | null>(null);
+  const [activeProjectStack, setActiveProjectStack] = useState<(typeof PROJECT_STACK_FILTERS)[number]["id"] | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const activeTitle = scope === "samar" ? "Ask about Samar" : "Ask about an uploaded resume";
@@ -72,6 +74,7 @@ export default function Home() {
   const resetConversation = () => {
     if (isBusy) return;
     setMessages([]);
+    setActiveProjectStack(null);
   };
 
   const switchScope = (nextScope: Scope) => {
@@ -83,6 +86,7 @@ export default function Home() {
     setScope(nextScope);
     setMessages([]);
     setJobDescription("");
+    setActiveProjectStack(null);
   };
 
   const uploadResume = (file: File) => {
@@ -115,6 +119,7 @@ export default function Home() {
         if (payload.deleteToken) window.sessionStorage.setItem(`resume-delete:${payload.shareToken}`, payload.deleteToken);
         setScope("uploaded");
         setMessages([]);
+        setActiveProjectStack(null);
         toast.success("Resume indexed for this temporary browser session.");
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "The resume could not be processed.");
@@ -135,6 +140,7 @@ export default function Home() {
       window.sessionStorage.removeItem(`resume-delete:${session.shareToken}`);
       setScope("samar");
       setMessages([]);
+      setActiveProjectStack(null);
       toast.success("The uploaded resume session has been deleted.");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Unable to delete the session.");
@@ -363,6 +369,39 @@ export default function Home() {
                     <Badge variant="outline" className="w-fit border-[#bd574b] bg-[#230d0e] text-[#f6b59a]">Scope locked</Badge>
                   </div>
                   <div className="mt-3 flex flex-col gap-2 sm:flex-row"><Textarea value={jobDescription} onChange={event => setJobDescription(event.target.value)} placeholder="Paste the role responsibilities, requirements, and preferred skills…" className="min-h-24 resize-y border-[#8f3a35] bg-[#15090a] text-[#f6ded2] placeholder:text-[#9a6f69] focus-visible:ring-[#e05247]" disabled={isBusy} /><Button onClick={() => void analyzeJobDescription(jobDescription)} disabled={isBusy || jobDescription.trim().length < 80} className="shrink-0 self-end bg-[#bd2f38] text-white hover:bg-[#d94544]"><ClipboardCheck className="size-4" />{isJobMatching ? "Comparing…" : "Estimate match"}</Button></div>
+                </div>
+              )}
+
+              {scope === "samar" && (
+                <div className="mx-5 mt-5 rounded-2xl border border-[#8f3a35]/55 bg-[#1a0b0c] p-4">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-[#ffe7d9]">Explore projects by stack</p>
+                      <p className="mt-1 text-xs leading-5 text-[#c79d94]">Choose a stack to ask a focused, grounded question about Samar’s strongest work.</p>
+                    </div>
+                    <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#d58e79]">Project filters</span>
+                  </div>
+                  <div role="group" aria-label="Project stack filters" className="mt-3 grid gap-2 sm:grid-cols-3">
+                    {PROJECT_STACK_FILTERS.map(filter => {
+                      const isActive = activeProjectStack === filter.id;
+                      return (
+                        <button
+                          key={filter.id}
+                          type="button"
+                          aria-pressed={isActive}
+                          disabled={isBusy}
+                          onClick={() => {
+                            setActiveProjectStack(filter.id);
+                            void sendMessage(filter.prompt);
+                          }}
+                          className={`rounded-xl border p-3 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff8068] disabled:cursor-not-allowed disabled:opacity-50 ${isActive ? "border-[#e45a4b] bg-[#7b2528] text-[#fff3ea] shadow-[0_12px_25px_-16px_rgba(231,67,57,0.8)]" : "border-[#6f302d] bg-[#240d0f] text-[#f7dcd1] hover:border-[#c74b40] hover:bg-[#351214]"}`}
+                        >
+                          <span className="block text-sm font-semibold">{filter.label}</span>
+                          <span className={`mt-1 block text-xs leading-5 ${isActive ? "text-[#ffe0d0]" : "text-[#c79b91]"}`}>{filter.description}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
 
