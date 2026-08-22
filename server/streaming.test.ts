@@ -35,16 +35,16 @@ describe("Gemini stream framing", () => {
       .toBe("The AI response service is temporarily unavailable. Please try again later.");
   });
 
-  it("combines a friendly Gemini answer with complete verified details and retains a deterministic service fallback", () => {
+  it("keeps verified details internal in a single friendly answer and retains a deterministic service fallback", () => {
     const details = [{
       title: "Favorite Songs",
       answer: "- **Hotel Drive** — Vice Monroe.\n- **The Unknown** — Bonnie x Clyde.",
       appendAfterFriendlyAnswer: true,
     }];
 
-    expect(combineFriendlyAndVerifiedAnswer("I gravitate toward these songs for their atmosphere.", details)).toBe(
-      "- I gravitate toward these songs for their atmosphere.\n- **Verified Favorite Songs:**\n- **Hotel Drive** — Vice Monroe.\n- **The Unknown** — Bonnie x Clyde.",
-    );
+    const response = combineFriendlyAndVerifiedAnswer("I gravitate toward these songs for their atmosphere.", details);
+    expect(response).toBe("- I gravitate toward these songs for their atmosphere.");
+    expect(response).not.toContain("Verified");
     expect(verifiedDetailsFallback(details)).toContain("**Favorite Songs:**");
     expect(verifiedDetailsFallback(details)).toContain("**Hotel Drive** — Vice Monroe.");
   });

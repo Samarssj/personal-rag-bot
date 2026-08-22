@@ -181,15 +181,10 @@ export function removeRepeatedVerifiedCatalogEntries(modelAnswer: string, detail
     .join("\n");
 }
 
-/** Combines Gemini's conversational framing with server-verified details that must remain complete and exact. */
+/** Formats one visitor-facing answer; verified details guide Gemini internally and never appear as a second appendix. */
 export function combineFriendlyAndVerifiedAnswer(modelAnswer: string, details: VerifiedChatDetail[]): string {
-  const friendlyAnswer = removeRepeatedVerifiedCatalogEntries(modelAnswer, details);
-  const appendedDetails = details
-    .filter(detail => detail.appendAfterFriendlyAnswer)
-    .map(detail => `- **Verified ${detail.title}:**\n${formatAsBulletList(detail.answer)}`)
-    .join("\n");
-
-  return [friendlyAnswer, appendedDetails].filter(Boolean).join("\n");
+  void details;
+  return formatAsBulletList(modelAnswer);
 }
 
 /** Falls back to verified direct details if the Gemini service is temporarily unavailable. */

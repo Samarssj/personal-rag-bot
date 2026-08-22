@@ -271,15 +271,17 @@ describe("resume RAG retrieval", () => {
     expect(prompt).toContain("Never turn a reasonable synthesis into an unsupported personal claim");
   });
 
-  it("tells Gemini to respond conversationally when verified details will be appended", () => {
+  it("tells Gemini to incorporate verified details internally without exposing validation language", () => {
     const prompt = buildGroundedSystemPrompt(
       "samar",
       [{ title: "Favorite Movies", content: "Primer and Interstellar." }],
       { verifiedDetails: [{ title: "Favorite Movies", answer: "- Primer" }] },
     );
 
-    expect(prompt).toContain("warm, friendly, first-person bullets");
-    expect(prompt).toContain("do not name or list individual catalog entries");
+    expect(prompt).toContain("one warm, friendly, first-person answer");
+    expect(prompt).toContain("internal evidence only");
+    expect(prompt).toContain("state each fact only once");
+    expect(prompt).toContain("Do not mention verification");
     expect(prompt).toContain("[Favorite Movies]\n- Primer");
   });
 
