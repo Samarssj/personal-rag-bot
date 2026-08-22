@@ -1,9 +1,23 @@
 import { describe, expect, it } from "vitest";
-import { combineFriendlyAndVerifiedAnswer, extractGeminiDelta, PORTFOLIO_CHAT_TEMPERATURE, removeRepeatedVerifiedCatalogEntries, splitSseFrames, verifiedDetailsFallback, verifiedPersonalFactDetails, visitorChatError } from "./resumeHttp";
+import { cacheSamarChatResponse, clearSamarChatResponseCache, combineFriendlyAndVerifiedAnswer, extractGeminiDelta, getCachedSamarChatResponse, PORTFOLIO_CHAT_TEMPERATURE, removeRepeatedVerifiedCatalogEntries, SAMAR_CHAT_CACHE_TTL_MS, samarChatCacheKey, splitSseFrames, verifiedDetailsFallback, verifiedPersonalFactDetails, visitorChatError } from "./resumeHttp";
 
 describe("Gemini stream framing", () => {
   it("uses temperature 1.0 for friendly portfolio chat responses", () => {
     expect(PORTFOLIO_CHAT_TEMPERATURE).toBe(1);
+  });
+
+  it("caches only equivalent standalone Samar prompts and preserves answer labels", () => {
+    clearSamarChatResponseCache();
+    const key = samarChatCacheKey("  What are your best AI projects? ", []);
+
+    expect(key).toBe("samar:what are your best ai projects?");
+    expect(samarChatCacheKey("What are your best AI projects?", [{ role: "user", content: "Earlier context" }])).toBeNull();
+    cacheSamarChatResponse(key!, "- News Pilot and Jarvis.", ["Project Recommendations"], 1_000);
+    expect(getCachedSamarChatResponse(key!, 1_001)).toEqual({
+      answer: "- News Pilot and Jarvis.",
+      labels: ["Project Recommendations"],
+    });
+    expect(getCachedSamarChatResponse(key!, 1_000 + SAMAR_CHAT_CACHE_TTL_MS + 1)).toBeUndefined();
   });
 
   it("preserves every CRLF-delimited provider frame instead of keeping only the first chunk", () => {

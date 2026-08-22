@@ -15,8 +15,12 @@ import { createInMemoryResumeSession, deleteInMemoryResumeSession, getInMemoryRe
 const UPLOAD_TTL_MS = 4 * 60 * 60 * 1000;
 const MAX_HISTORY_MESSAGES = 8;
 export const PORTFOLIO_CHAT_TEMPERATURE = 1;
+export const SAMAR_CHAT_CACHE_TTL_MS = 3 * 60 * 1000;
+const MAX_SAMAR_CHAT_CACHE_ENTRIES = 50;
 
 type ClientMessage = { role: "user" | "assistant"; content: string };
+type CachedSamarChatResponse = { answer: string; labels: string[]; expiresAt: number };
+const samarChatResponseCache = new Map<string, CachedSamarChatResponse>();
 
 function sendError(res: Response, status: number, message: string) {
   return res.status(status).json({ error: message });
@@ -71,6 +75,40 @@ export function visitorChatError(message: string): string {
   return /usage exhausted|precondition failed/i.test(message)
     ? "The AI response service is temporarily unavailable. Please try again later."
     : "Unable to generate a response.";
+}
+
+/** Cache only standalone, equivalent Samar prompts; conversational or uploaded-resume context is never reused. */
+export function samarChatCacheKey(question: string, history: ClientMessage[]): string | null {
+  if (history.length > 0) return null;
+  const normalizedQuestion = question.toLocaleLowerCase().replace(/\s+/g, " ").trim();
+  return normalizedQuestion ? `samar:${normalizedQuestion}` : null;
+}
+
+export function getCachedSamarChatResponse(key: string, now = Date.now()): { answer: string; labels: string[] } | undefined {
+  const cached = samarChatResponseCache.get(key);
+  if (!cached) return undefined;
+  if (cached.expiresAt <= now) {
+    samarChatResponseCache.delete(key);
+    return undefined;
+  }
+  samarChatResponseCache.delete(key);
+  samarChatResponseCache.set(key, cached);
+  return { answer: cached.answer, labels: cached.labels };
+}
+
+export function cacheSamarChatResponse(key: string, answer: string, labels: string[], now = Date.now()) {
+  if (!answer) return;
+  if (samarChatResponseCache.has(key)) samarChatResponseCache.delete(key);
+  while (samarChatResponseCache.size >= MAX_SAMAR_CHAT_CACHE_ENTRIES) {
+    const oldestKey = samarChatResponseCache.keys().next().value as string | undefined;
+    if (!oldestKey) break;
+    samarChatResponseCache.delete(oldestKey);
+  }
+  samarChatResponseCache.set(key, { answer, labels, expiresAt: now + SAMAR_CHAT_CACHE_TTL_MS });
+}
+
+export function clearSamarChatResponseCache() {
+  samarChatResponseCache.clear();
 }
 
 export type VerifiedChatDetail = {
@@ -252,6 +290,26 @@ export function registerResumeRagRoutes(app: Express) {
         return res.end();
       }
 
+      const history = parseHistory(req.body?.history);
+      const cacheKey = scope === "samar" && !requestsProjectCatalog(question) && !profileLinkAnswer(question) && !certificationCatalogAnswer(question)
+        ? samarChatCacheKey(question, history)
+        : null;
+      const cachedResponse = cacheKey ? getCachedSamarChatResponse(cacheKey) : undefined;
+      if (cachedResponse) {
+        res.status(200);
+        res.set({
+          "Cache-Control": "no-cache, no-transform",
+          Connection: "keep-alive",
+          "Content-Type": "text/event-stream",
+          "X-Accel-Buffering": "no",
+        });
+        res.flushHeaders();
+        sendSse(res, "sources", { labels: cachedResponse.labels });
+        sendSse(res, "token", { delta: cachedResponse.answer });
+        sendSse(res, "done", { ok: true });
+        return res.end();
+      }
+
       const verifiedDetails: VerifiedChatDetail[] = [];
       const directHometown = scope === "samar" ? hometownAnswer(question) : null;
       const directExperience = scope === "samar" ? detailedExperienceAnswer(question) : null;
@@ -319,7 +377,6 @@ export function registerResumeRagRoutes(app: Express) {
         samarSections,
       );
       const systemPrompt = buildGroundedSystemPrompt(scope, sources, { verifiedDetails });
-      const history = parseHistory(req.body?.history);
       res.status(200);
       res.set({
         "Cache-Control": "no-cache, no-transform",
@@ -328,9 +385,8 @@ export function registerResumeRagRoutes(app: Express) {
         "X-Accel-Buffering": "no",
       });
       res.flushHeaders();
-      sendSse(res, "sources", {
-        labels: Array.from(new Set([...sourceLabels(sources), ...verifiedDetails.map(detail => detail.title)])),
-      });
+      const labels = Array.from(new Set([...sourceLabels(sources), ...verifiedDetails.map(detail => detail.title)]));
+      sendSse(res, "sources", { labels });
       let answer: string;
       try {
         answer = await generateGeminiText({
@@ -351,6 +407,7 @@ export function registerResumeRagRoutes(app: Express) {
         return res.end();
       }
       const formattedAnswer = combineFriendlyAndVerifiedAnswer(answer, verifiedDetails);
+      if (cacheKey) cacheSamarChatResponse(cacheKey, formattedAnswer, labels);
       if (formattedAnswer) sendSse(res, "token", { delta: formattedAnswer });
       sendSse(res, "done", { ok: true });
       return res.end();
