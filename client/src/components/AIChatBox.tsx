@@ -197,7 +197,7 @@ export function AIChatBox({
     <div
       ref={containerRef}
       className={cn(
-        "flex flex-col bg-card text-card-foreground rounded-lg border shadow-sm",
+        "flex min-w-0 flex-col overflow-hidden bg-card text-card-foreground rounded-lg border shadow-sm",
         className
       )}
       style={{ height }}
@@ -230,7 +230,7 @@ export function AIChatBox({
           </div>
         ) : (
           <ScrollArea className="h-full">
-            <div className="flex flex-col space-y-4 p-4">
+            <div className="flex min-w-0 flex-col space-y-4 p-4">
               {displayMessages.map((message, index) => {
                 // Apply min-height to last message only if NOT loading (when loading, the loading indicator gets it)
                 const isLastMessage = index === displayMessages.length - 1;
@@ -241,7 +241,7 @@ export function AIChatBox({
                   <div
                     key={index}
                     className={cn(
-                      "flex gap-3",
+                      "flex min-w-0 gap-3",
                       message.role === "user"
                         ? "justify-end items-start"
                         : "justify-start items-start"
@@ -260,15 +260,15 @@ export function AIChatBox({
 
                     <div
                       className={cn(
-                        "max-w-[80%] rounded-lg px-4 py-2.5",
+                        "min-w-0 max-w-[calc(100%-2.75rem)] break-words [overflow-wrap:anywhere] sm:max-w-[80%] rounded-lg px-4 py-2.5",
                         message.role === "user"
                           ? "bg-primary text-primary-foreground"
                           : "bg-muted text-foreground"
                       )}
                     >
                       {message.role === "assistant" ? (
-                        <div>
-                          <div className="prose prose-sm dark:prose-invert max-w-none">
+                        <div className="min-w-0">
+                          <div className="prose prose-sm dark:prose-invert max-w-none min-w-0 break-words [overflow-wrap:anywhere] [&_a]:break-all [&_a]:[overflow-wrap:anywhere]">
                             <Streamdown>{message.content}</Streamdown>
                           </div>
                           {message.sources && message.sources.length > 0 && (
@@ -276,7 +276,7 @@ export function AIChatBox({
                               {message.sources.map(source => (
                                 <span
                                   key={source}
-                                  className="rounded-full bg-background px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground"
+                                  className="max-w-full break-words rounded-full bg-background px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground"
                                 >
                                   {source}
                                 </span>
