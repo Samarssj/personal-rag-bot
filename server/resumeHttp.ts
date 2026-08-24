@@ -159,21 +159,21 @@ export function verifiedPersonalFactDetails(question: string): VerifiedChatDetai
   if (/\b(?:hobby|hobbies|badminton|skateboard(?:ing)?|cycling|sprint(?:er|ing)?|fun fact)\b/.test(normalized)) {
     details.push({
       title: "Hobbies & Fun Facts",
-      answer: "- **Hobbies:** Badminton, skateboarding, and cycling.\n- **Athletic fun fact:** I am a great sprinter, and I can play badminton with both hands.",
+      answer: "- I enjoy badminton, skateboarding, and cycling.\n- I am a great sprinter, and I can play badminton with both hands.",
       appendAfterFriendlyAnswer: true,
     });
   }
   if (/\b(?:personality|personality type|ambivert|intp|introvert|extrovert)\b/.test(normalized)) {
     details.push({
       title: "Personality",
-      answer: "- **Personality:** I am an ambivert with an INTP personality type.",
+      answer: "- I am an ambivert with an INTP personality type.",
       appendAfterFriendlyAnswer: true,
     });
   }
   if (/\b(?:tragic|tragedy|setback|fracture|injury|recovery|recovered)\b/.test(normalized)) {
     details.push({
       title: "Personal Setback and Recovery",
-      answer: "- **Personal setback:** I had a fracture in my lower right leg, which was difficult as a sporty person.\n- **Recovery:** I have almost recovered now.",
+      answer: "- I had a fracture in my lower right leg, which was difficult as a sporty person.\n- I have almost recovered now.",
       appendAfterFriendlyAnswer: true,
     });
   }
@@ -220,7 +220,7 @@ export function combineFriendlyAndVerifiedAnswer(modelAnswer: string, details: V
 /** Falls back to verified direct details if the Gemini service is temporarily unavailable. */
 export function verifiedDetailsFallback(details: VerifiedChatDetail[]): string {
   return details
-    .map(detail => `- **${detail.title}:**\n${formatAsBulletList(detail.answer)}`)
+    .map(detail => formatAsBulletList(detail.answer))
     .join("\n");
 }
 

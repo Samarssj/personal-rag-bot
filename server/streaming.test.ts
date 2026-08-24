@@ -55,8 +55,8 @@ describe("Gemini stream framing", () => {
     const response = combineFriendlyAndVerifiedAnswer("I gravitate toward these songs for their atmosphere.", details);
     expect(response).toBe("- I gravitate toward these songs for their atmosphere.");
     expect(response).not.toContain("Verified");
-    expect(verifiedDetailsFallback(details)).toContain("**Favorite Songs:**");
-    expect(verifiedDetailsFallback(details)).toContain("**Hotel Drive** — Vice Monroe.");
+    expect(verifiedDetailsFallback(details)).toBe("- **Hotel Drive** — Vice Monroe.\n- **The Unknown** — Bonnie x Clyde.");
+    expect(verifiedDetailsFallback(details)).not.toContain("**Favorite Songs:**");
   });
 
   it("removes model-repeated catalog entries before appending verified details and supplies fixed profile facts", () => {
@@ -71,11 +71,22 @@ describe("Gemini stream framing", () => {
     const facts = verifiedPersonalFactDetails("What is your birthday, height, and education?");
     expect(facts.map(fact => fact.title)).toEqual(expect.arrayContaining(["Birth Date and Age", "Height", "Education"]));
     expect(facts.find(fact => fact.title === "Education")?.answer).toContain("CGPA of 7.76");
+    const heightFallback = verifiedDetailsFallback(verifiedPersonalFactDetails("What is your height?"));
+    expect(heightFallback).toBe("- **Height:** I am 6 feet tall.");
+    expect(heightFallback.match(/\*\*Height:\*\*/g)).toHaveLength(1);
 
     const expandedFacts = verifiedPersonalFactDetails("What are your hobbies and personality type, and what was a tragic setback in your life?");
     expect(expandedFacts.map(fact => fact.title)).toEqual(expect.arrayContaining(["Hobbies & Fun Facts", "Personality", "Personal Setback and Recovery"]));
     expect(expandedFacts.find(fact => fact.title === "Hobbies & Fun Facts")?.answer).toContain("skateboarding");
     expect(expandedFacts.find(fact => fact.title === "Personality")?.answer).toContain("INTP");
     expect(expandedFacts.find(fact => fact.title === "Personal Setback and Recovery")?.answer).toContain("almost recovered");
+    expect(verifiedDetailsFallback(expandedFacts)).toBe([
+      "- I enjoy badminton, skateboarding, and cycling.",
+      "- I am a great sprinter, and I can play badminton with both hands.",
+      "- I am an ambivert with an INTP personality type.",
+      "- I had a fracture in my lower right leg, which was difficult as a sporty person.",
+      "- I have almost recovered now.",
+    ].join("\n"));
+    expect(verifiedDetailsFallback(expandedFacts)).not.toMatch(/(?:Personality|Hobbies|Recovery):/);
   });
 });
