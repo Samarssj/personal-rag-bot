@@ -40,7 +40,17 @@ export const SAMAR_KNOWLEDGE_BASE: KnowledgeSection[] = [
   {
     title: "Hobbies & Fun Facts",
     content:
-      "My hobby is badminton. I play badminton, and a fun fact about me is that I can play it with both hands.",
+      "My hobbies are badminton, skateboarding, and cycling. I am also a great sprinter. A fun fact about me is that I can play badminton with both hands.",
+  },
+  {
+    title: "Personality",
+    content:
+      "My personality type is INTP, and I am an ambivert. Share these details when someone asks about my personality or personality type.",
+  },
+  {
+    title: "Personal Setback and Recovery",
+    content:
+      "A significant setback in my life was a fracture in my lower right leg. As a sporty person, it was difficult, but I have almost recovered now. Share this context only when someone directly asks about a tragic moment, injury, setback, fracture, or recovery.",
   },
   {
     title: "Personal Facts",

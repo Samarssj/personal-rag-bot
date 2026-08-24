@@ -48,6 +48,19 @@ describe("resume RAG retrieval", () => {
     const sources = retrieveRelevantSections("samar", "What are your hobbies?");
 
     expect(sources.some(source => source.title === "Hobbies & Fun Facts" && source.content.includes("both hands"))).toBe(true);
+    expect(sources.some(source => source.title === "Hobbies & Fun Facts" && source.content.includes("skateboarding") && source.content.includes("great sprinter"))).toBe(true);
+  });
+
+  it("retrieves Samar’s supplied ambivert and INTP personality details", () => {
+    const sources = retrieveRelevantSections("samar", "What is your personality type?");
+
+    expect(sources.some(source => source.title === "Personality" && source.content.includes("ambivert") && source.content.includes("INTP"))).toBe(true);
+  });
+
+  it("retrieves the supplied recovery context for a tragic personal setback", () => {
+    const sources = retrieveRelevantSections("samar", "What was a tragic moment or setback in your life?");
+
+    expect(sources.some(source => source.title === "Personal Setback and Recovery" && source.content.includes("lower right leg") && source.content.includes("almost recovered"))).toBe(true);
   });
 
   it("retrieves the explicit height fact", () => {
@@ -261,7 +274,10 @@ describe("resume RAG retrieval", () => {
   it("includes the critical factual-answer guardrails in the Samar prompt", () => {
     const prompt = buildGroundedSystemPrompt("samar", [{ title: "Personal Facts", content: "My height is 6 feet." }]);
 
-    expect(prompt).toContain("badminton is my hobby");
+    expect(prompt).toContain("I play badminton with both hands");
+    expect(prompt).toContain("badminton, skateboarding, and cycling");
+    expect(prompt).toContain("ambivert with an INTP personality type");
+    expect(prompt).toContain("lower-right-leg fracture");
     expect(prompt).toContain("answer 6 feet");
     expect(prompt).toContain("Chitkara University, Punjab");
     expect(prompt).toContain("fresher with two internships");

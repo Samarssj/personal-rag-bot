@@ -245,15 +245,16 @@ export default function Home() {
       }
       if (buffer.trim()) processEvent(buffer);
     } catch (error) {
+      const visitorMessage = error instanceof Error ? error.message : "Unable to generate a response.";
       setMessages(current => {
         const next = [...current];
         const finalIndex = next.length - 1;
         if (next[finalIndex]?.role === "assistant" && !next[finalIndex].content) {
-          next[finalIndex] = { ...next[finalIndex], content: "I couldn't complete that response. Please try again." };
+          next[finalIndex] = { ...next[finalIndex], content: `- ${visitorMessage}` };
         }
         return next;
       });
-      toast.error(error instanceof Error ? error.message : "Unable to generate a response.");
+      toast.error(visitorMessage);
     } finally {
       setIsStreaming(false);
     }

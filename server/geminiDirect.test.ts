@@ -3,10 +3,12 @@ import { extractGeminiStreamText, generateGeminiText, streamGeminiText, toGemini
 
 const originalKey = process.env.GEMINI_API_KEY;
 const originalModel = process.env.GEMINI_MODEL;
+const originalFallbackModel = process.env.GEMINI_FALLBACK_MODEL;
 
 afterEach(() => {
   process.env.GEMINI_API_KEY = originalKey;
   process.env.GEMINI_MODEL = originalModel;
+  process.env.GEMINI_FALLBACK_MODEL = originalFallbackModel;
   vi.unstubAllGlobals();
 });
 
@@ -90,5 +92,49 @@ describe("direct Gemini adapter", () => {
     expect(chunks).toEqual(["- Complete fallback answer"]);
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(fetchMock.mock.calls[1]?.[0]).toContain(":generateContent");
+  });
+
+  it("retries a retryable primary-model failure with the configured stable fallback", async () => {
+    process.env.GEMINI_API_KEY = "test-key";
+    process.env.GEMINI_MODEL = "gemini-latest";
+    process.env.GEMINI_FALLBACK_MODEL = "gemini-stable";
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ error: { message: "Requested entity was not found." } }), { status: 404 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        candidates: [{ content: { parts: [{ text: "- Stable fallback answer" }] } }],
+      }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(generateGeminiText({
+      systemPrompt: "Stay grounded.",
+      messages: [{ role: "user", content: "Tell me about Samar." }],
+    })).resolves.toBe("- Stable fallback answer");
+
+    expect(fetchMock.mock.calls[0]?.[0]).toContain("models/gemini-latest:generateContent");
+    expect(fetchMock.mock.calls[1]?.[0]).toContain("models/gemini-stable:generateContent");
+  });
+
+  it("uses the stable fallback after both streaming and primary non-streaming attempts fail", async () => {
+    process.env.GEMINI_API_KEY = "test-key";
+    process.env.GEMINI_MODEL = "gemini-latest";
+    process.env.GEMINI_FALLBACK_MODEL = "gemini-stable";
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ error: { message: "Model unavailable" } }), { status: 404 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ error: { message: "Model unavailable" } }), { status: 404 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        candidates: [{ content: { parts: [{ text: "- Stable streamed fallback" }] } }],
+      }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const chunks: string[] = [];
+    for await (const chunk of streamGeminiText({
+      systemPrompt: "Stay grounded.",
+      messages: [{ role: "user", content: "Tell me about Samar." }],
+    })) chunks.push(chunk);
+
+    expect(chunks).toEqual(["- Stable streamed fallback"]);
+    expect(fetchMock.mock.calls[0]?.[0]).toContain("models/gemini-latest:streamGenerateContent?alt=sse");
+    expect(fetchMock.mock.calls[1]?.[0]).toContain("models/gemini-latest:generateContent");
+    expect(fetchMock.mock.calls[2]?.[0]).toContain("models/gemini-stable:generateContent");
   });
 });

@@ -109,9 +109,10 @@ Create a local `.env` file that is excluded from Git, then add your server-side 
 ```dotenv
 GEMINI_API_KEY=your_google_gemini_api_key
 GEMINI_MODEL=gemini-3.6-flash
+GEMINI_FALLBACK_MODEL=gemini-2.5-flash
 ```
 
-> Keep `GEMINI_API_KEY` private. Never expose it in frontend code or commit it to GitHub.
+> Keep `GEMINI_API_KEY` private. Never expose it in frontend code or commit it to GitHub. `GEMINI_FALLBACK_MODEL` is optional; it defaults to the stable `gemini-2.5-flash` model when the primary model is unavailable or returns a retryable provider failure.
 
 ### 3. Start development
 

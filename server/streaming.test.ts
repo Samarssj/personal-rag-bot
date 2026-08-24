@@ -36,9 +36,13 @@ describe("Gemini stream framing", () => {
     expect(frames.rest).toBe("");
   });
 
-  it("hides raw provider-exhaustion details behind a clear retry message", () => {
+  it("maps quota exhaustion, capacity pressure, and missing models to clear visitor-safe messages", () => {
     expect(visitorChatError('LLM stream failed: 412 Precondition Failed – {"message":"your account has hit a usage exhausted"}'))
-      .toBe("The AI response service is temporarily unavailable. Please try again later.");
+      .toBe("Gemini quota or rate limit is currently exhausted. Please try again shortly.");
+    expect(visitorChatError("Gemini model gemini-3.6-flash returned HTTP 503: capacity is temporarily unavailable"))
+      .toBe("Gemini is experiencing high demand or temporary capacity pressure. Please try again shortly.");
+    expect(visitorChatError("Gemini model gemini-3.6-flash returned HTTP 404: Requested entity was not found."))
+      .toBe("The requested Gemini model is unavailable, and the stable fallback model could not complete this request. Please try again later.");
   });
 
   it("keeps verified details internal in a single friendly answer and retains a deterministic service fallback", () => {
@@ -67,5 +71,11 @@ describe("Gemini stream framing", () => {
     const facts = verifiedPersonalFactDetails("What is your birthday, height, and education?");
     expect(facts.map(fact => fact.title)).toEqual(expect.arrayContaining(["Birth Date and Age", "Height", "Education"]));
     expect(facts.find(fact => fact.title === "Education")?.answer).toContain("CGPA of 7.76");
+
+    const expandedFacts = verifiedPersonalFactDetails("What are your hobbies and personality type, and what was a tragic setback in your life?");
+    expect(expandedFacts.map(fact => fact.title)).toEqual(expect.arrayContaining(["Hobbies & Fun Facts", "Personality", "Personal Setback and Recovery"]));
+    expect(expandedFacts.find(fact => fact.title === "Hobbies & Fun Facts")?.answer).toContain("skateboarding");
+    expect(expandedFacts.find(fact => fact.title === "Personality")?.answer).toContain("INTP");
+    expect(expandedFacts.find(fact => fact.title === "Personal Setback and Recovery")?.answer).toContain("almost recovered");
   });
 });

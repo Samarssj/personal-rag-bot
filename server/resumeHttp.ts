@@ -76,9 +76,16 @@ export function splitSseFrames(buffer: string) {
 }
 
 export function visitorChatError(message: string): string {
-  return /usage exhausted|precondition failed/i.test(message)
-    ? "The AI response service is temporarily unavailable. Please try again later."
-    : "Unable to generate a response.";
+  if (/usage exhausted|resource exhausted|quota|rate limit|too many requests|http 429/i.test(message)) {
+    return "Gemini quota or rate limit is currently exhausted. Please try again shortly.";
+  }
+  if (/high demand|capacity|overloaded|service unavailable|http 503|http 502|http 504/i.test(message)) {
+    return "Gemini is experiencing high demand or temporary capacity pressure. Please try again shortly.";
+  }
+  if (/model.*(?:not found|unavailable)|requested entity was not found|http 404/i.test(message)) {
+    return "The requested Gemini model is unavailable, and the stable fallback model could not complete this request. Please try again later.";
+  }
+  return "Unable to generate a response.";
 }
 
 /** Cache only standalone, equivalent Samar prompts; conversational or uploaded-resume context is never reused. */
@@ -149,10 +156,24 @@ export function verifiedPersonalFactDetails(question: string): VerifiedChatDetai
       appendAfterFriendlyAnswer: true,
     });
   }
-  if (/\b(?:hobby|hobbies|badminton|fun fact)\b/.test(normalized)) {
+  if (/\b(?:hobby|hobbies|badminton|skateboard(?:ing)?|cycling|sprint(?:er|ing)?|fun fact)\b/.test(normalized)) {
     details.push({
       title: "Hobbies & Fun Facts",
-      answer: "- **Hobby:** Badminton.\n- **Fun fact:** I can play badminton with both hands.",
+      answer: "- **Hobbies:** Badminton, skateboarding, and cycling.\n- **Athletic fun fact:** I am a great sprinter, and I can play badminton with both hands.",
+      appendAfterFriendlyAnswer: true,
+    });
+  }
+  if (/\b(?:personality|personality type|ambivert|intp|introvert|extrovert)\b/.test(normalized)) {
+    details.push({
+      title: "Personality",
+      answer: "- **Personality:** I am an ambivert with an INTP personality type.",
+      appendAfterFriendlyAnswer: true,
+    });
+  }
+  if (/\b(?:tragic|tragedy|setback|fracture|injury|recovery|recovered)\b/.test(normalized)) {
+    details.push({
+      title: "Personal Setback and Recovery",
+      answer: "- **Personal setback:** I had a fracture in my lower right leg, which was difficult as a sporty person.\n- **Recovery:** I have almost recovered now.",
       appendAfterFriendlyAnswer: true,
     });
   }

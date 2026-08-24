@@ -119,12 +119,28 @@ const STOP_WORDS = new Set([
 ]);
 
 const INTENT_EXPANSIONS: Record<string, string[]> = {
-  hobby: ["fun", "leisure", "recreation", "sport", "badminton"],
-  fun: ["hobby", "leisure", "recreation", "badminton"],
-  leisure: ["hobby", "fun", "recreation", "sport"],
-  recreation: ["hobby", "fun", "leisure", "sport"],
-  sport: ["hobby", "fun", "badminton"],
-  badminton: ["hobby", "sport", "fun"],
+  hobby: ["fun", "leisure", "recreation", "sport", "badminton", "skateboard", "cycling", "sprint"],
+  fun: ["hobby", "leisure", "recreation", "badminton", "skateboard", "cycling", "sprint"],
+  leisure: ["hobby", "fun", "recreation", "sport", "skateboard", "cycling"],
+  recreation: ["hobby", "fun", "leisure", "sport", "skateboard", "cycling", "sprint"],
+  sport: ["hobby", "fun", "badminton", "skateboard", "cycling", "sprint"],
+  badminton: ["hobby", "sport", "fun", "skateboard", "cycling", "sprint"],
+  skateboard: ["hobby", "sport", "cycling", "sprint"],
+  cycling: ["hobby", "sport", "skateboard", "sprint"],
+  sprint: ["hobby", "sport", "athletic", "running"],
+  sprinter: ["hobby", "sport", "sprint", "running"],
+  personality: ["ambivert", "intp", "introvert", "extrovert"],
+  ambivert: ["personality", "intp", "introvert", "extrovert"],
+  intp: ["personality", "ambivert"],
+  introvert: ["personality", "ambivert", "intp"],
+  extrovert: ["personality", "ambivert", "intp"],
+  tragic: ["setback", "fracture", "injury", "recovery"],
+  tragedy: ["tragic", "setback", "fracture", "injury", "recovery"],
+  setback: ["tragic", "fracture", "injury", "recovery"],
+  fracture: ["setback", "injury", "recovery", "leg"],
+  injury: ["setback", "fracture", "recovery", "leg"],
+  recovery: ["setback", "fracture", "injury", "recovered"],
+  recovered: ["recovery", "setback", "fracture", "injury"],
   height: ["tall", "stature", "feet"],
   tall: ["height", "stature", "feet"],
   stature: ["height", "tall", "feet"],
@@ -189,7 +205,9 @@ const INTENT_EXPANSIONS: Record<string, string[]> = {
 };
 
 const INTENT_PHRASES: Array<{ phrases: string[]; evidence: string[]; sectionHints: string[] }> = [
-  { phrases: ["spare time", "free time", "do for fun", "recreational"], evidence: ["hobby", "badminton", "fun"], sectionHints: ["hobbies", "fun"] },
+  { phrases: ["spare time", "free time", "do for fun", "recreational"], evidence: ["hobby", "badminton", "skateboard", "cycling", "sprint"], sectionHints: ["hobbies", "fun"] },
+  { phrases: ["personality type", "your personality", "are you an introvert", "are you an extrovert"], evidence: ["personality", "ambivert", "intp"], sectionHints: ["personality"] },
+  { phrases: ["tragic moment", "tragic event", "personal setback", "sports injury", "lower right leg"], evidence: ["setback", "fracture", "recovery", "leg"], sectionHints: ["setback", "recovery"] },
   { phrases: ["how tall", "physical stature", "how high"], evidence: ["height", "feet", "tall"], sectionHints: ["personal"] },
   { phrases: ["get in touch", "reach out", "drop you a note", "contact details"], evidence: ["email", "phone", "contact"], sectionHints: ["contact", "profile"] },
   { phrases: ["where are you from", "where do you live", "where are you based", "home town", "hometown"], evidence: ["jammu", "kashmir", "india", "location"], sectionHints: ["personal", "profile"] },
@@ -471,7 +489,7 @@ ${hybridRule}
 
 Formatting rule: For every substantive answer, use Markdown bullet points only. Start every non-empty answer line with "- "; do not write prose paragraphs, introductions, or conclusions outside the bullets. Keep each bullet concise and factual. The only exception is a simple greeting, which may remain a single short sentence.
 
-	For Samar mode, preserve the exact facts in the retrieved passages. In particular, if asked about hobbies, answer that badminton is my hobby and include that I play it with both hands as a fun fact. If asked about my height, answer 6 feet. If asked about my hometown or where I am from, answer Jammu, India. If asked about education or where I studied, answer Chitkara University, Punjab when that passage is retrieved. Use the portfolio profile date of birth to calculate age for the requested date or year; do not guess. If asked about experience, state that I am a fresher with two internships—AI Engineer Intern at EXL and ABM Intern at HighRadius—and that I recently joined EXL as an Associate AI Developer. For detailed experience questions, use separate complete bullets for my current EXL Associate AI Developer work, current Scrapy agent work, EXL internship, and HighRadius internship; include supported responsibilities or outcomes and never end a bullet mid-sentence. Never describe unlisted jobs, education, dates, employers, seniority, or achievements as facts.
+		For Samar mode, preserve the exact facts in the retrieved passages. In particular, if asked about hobbies, answer that I enjoy badminton, skateboarding, and cycling; mention that I am a great sprinter and include that I play badminton with both hands as a fun fact. If asked about my personality, answer that I am an ambivert with an INTP personality type. If asked about a tragic moment, injury, setback, fracture, or recovery, explain that my lower-right-leg fracture was a significant setback as a sporty person and that I have almost recovered now. If asked about my height, answer 6 feet. If asked about my hometown or where I am from, answer Jammu, India. If asked about education or where I studied, answer Chitkara University, Punjab when that passage is retrieved. Use the portfolio profile date of birth to calculate age for the requested date or year; do not guess. If asked about experience, state that I am a fresher with two internships—AI Engineer Intern at EXL and ABM Intern at HighRadius—and that I recently joined EXL as an Associate AI Developer. For detailed experience questions, use separate complete bullets for my current EXL Associate AI Developer work, current Scrapy agent work, EXL internship, and HighRadius internship; include supported responsibilities or outcomes and never end a bullet mid-sentence. Never describe unlisted jobs, education, dates, employers, seniority, or achievements as facts.
 
 	If asked for contact information, give the exact email address from the Contact or Profile passage and do not invent alternate contact details.
 

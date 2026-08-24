@@ -14,12 +14,22 @@ type GeminiApiResponse = {
   error?: { message?: string };
 };
 
-const DEFAULT_GEMINI_MODEL = "gemini-3.6-flash";
+export const DEFAULT_GEMINI_MODEL = "gemini-3.6-flash";
+export const DEFAULT_GEMINI_FALLBACK_MODEL = "gemini-2.5-flash";
+
+class GeminiRequestError extends Error {
+  constructor(message: string, readonly status: number) {
+    super(message);
+    this.name = "GeminiRequestError";
+  }
+}
 
 export function getGeminiConfig() {
   const apiKey = process.env.GEMINI_API_KEY?.trim();
   if (!apiKey) throw new Error("Gemini is not configured. Set GEMINI_API_KEY on the server.");
-  return { apiKey, model: process.env.GEMINI_MODEL?.trim() || DEFAULT_GEMINI_MODEL };
+  const model = process.env.GEMINI_MODEL?.trim() || DEFAULT_GEMINI_MODEL;
+  const configuredFallback = process.env.GEMINI_FALLBACK_MODEL?.trim() || DEFAULT_GEMINI_FALLBACK_MODEL;
+  return { apiKey, model, fallbackModel: configuredFallback === model ? null : configuredFallback };
 }
 
 export function toGeminiContents(messages: GeminiMessage[]) {
@@ -47,6 +57,51 @@ function geminiRequestBody({ systemPrompt, messages, temperature, maxOutputToken
       ...(thinkingLevel ? { thinkingConfig: { thinkingLevel } } : {}),
     },
   });
+}
+
+function isRetryableGeminiFailure(error: unknown): boolean {
+  if (!(error instanceof GeminiRequestError)) return true;
+  return [404, 408, 409, 429, 500, 502, 503, 504].includes(error.status);
+}
+
+async function generateGeminiTextForModel({
+  apiKey,
+  model,
+  request,
+}: {
+  apiKey: string;
+  model: string;
+  request: {
+    systemPrompt: string;
+    messages: GeminiMessage[];
+    temperature: number;
+    maxOutputTokens: number;
+    responseMimeType?: "application/json";
+    thinkingLevel?: GeminiThinkingLevel;
+  };
+}): Promise<string> {
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-goog-api-key": apiKey,
+    },
+    body: geminiRequestBody(request),
+  });
+
+  const payload = await response.json().catch(() => ({})) as GeminiApiResponse;
+  if (!response.ok) {
+    const providerMessage = payload.error?.message?.trim() || `Gemini request failed with HTTP ${response.status}.`;
+    throw new GeminiRequestError(`Gemini model ${model} returned HTTP ${response.status}: ${providerMessage}`, response.status);
+  }
+
+  const text = payload.candidates?.[0]?.content?.parts
+    ?.map(part => part.text ?? "")
+    .join("")
+    .trim();
+  if (text) return text;
+  if (payload.promptFeedback?.blockReason) throw new GeminiRequestError("Gemini could not return a response for this request.", 400);
+  throw new GeminiRequestError("Gemini returned an empty response.", 502);
 }
 
 /** Extracts text from one Gemini `streamGenerateContent` SSE event. */
@@ -82,26 +137,14 @@ export async function generateGeminiText({
   responseMimeType?: "application/json";
   thinkingLevel?: GeminiThinkingLevel;
 }): Promise<string> {
-  const { apiKey, model } = getGeminiConfig();
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-goog-api-key": apiKey,
-    },
-    body: geminiRequestBody({ systemPrompt, messages, temperature, maxOutputTokens, responseMimeType, thinkingLevel }),
-  });
-
-  const payload = await response.json().catch(() => ({})) as GeminiApiResponse;
-  if (!response.ok) throw new Error(payload.error?.message || `Gemini request failed with HTTP ${response.status}.`);
-
-  const text = payload.candidates?.[0]?.content?.parts
-    ?.map(part => part.text ?? "")
-    .join("")
-    .trim();
-  if (text) return text;
-  if (payload.promptFeedback?.blockReason) throw new Error("Gemini could not return a response for this request.");
-  throw new Error("Gemini returned an empty response.");
+  const request = { systemPrompt, messages, temperature, maxOutputTokens, responseMimeType, thinkingLevel };
+  const { apiKey, model, fallbackModel } = getGeminiConfig();
+  try {
+    return await generateGeminiTextForModel({ apiKey, model, request });
+  } catch (error) {
+    if (!fallbackModel || !isRetryableGeminiFailure(error)) throw error;
+    return generateGeminiTextForModel({ apiKey, model: fallbackModel, request });
+  }
 }
 
 /**
