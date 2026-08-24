@@ -27,6 +27,13 @@ describe("GitHub project knowledge", () => {
       homepageUrl: "https://auto-apply-datn.onrender.com",
       language: "TypeScript",
     });
+    expect(FALLBACK_GITHUB_PROJECTS.find(project => project.name === "OptimizerOS")).toMatchObject({
+      description: "An intelligent code optimizer that analyzes time and space complexity, refactors algorithmic bottlenecks, and provides production-ready code with interactive diffs.",
+      url: "https://github.com/Samarssj/OptimizerOS",
+      homepageUrl: "https://optimizeros.onrender.com",
+      language: "TypeScript",
+      updatedAt: "2026-08-24T13:17:15Z",
+    });
     expect(FALLBACK_GITHUB_PROJECTS.find(project => project.name === "step-pulse")).toMatchObject({
       url: "https://github.com/Samarssj/step-pulse",
       homepageUrl: "https://step-pulse.vercel.app",

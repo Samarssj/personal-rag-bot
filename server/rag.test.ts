@@ -100,15 +100,18 @@ describe("resume RAG retrieval", () => {
     expect(result?.answer.split("\n")).toHaveLength(5);
   });
 
-  it("returns both verified full-stack project recommendations for a best-project question", () => {
+  it("returns OptimizerOS and Auto Apply for a best full-stack-project question", () => {
     const result = fullStackProjectRecommendationAnswer("What are your best full stack projects?");
 
     expect(result?.title).toBe("Recommended Full-Stack Projects");
+    expect(result?.answer).toContain("OptimizerOS");
     expect(result?.answer).toContain("Auto Apply");
-    expect(result?.answer).toContain("Step-Pulse");
+    expect(result?.answer).toContain("analyzes time and space complexity");
     expect(result?.answer).toContain("AI-powered SaaS for automated job applications");
+    expect(result?.answer).toContain("https://github.com/Samarssj/OptimizerOS");
+    expect(result?.answer).toContain("https://optimizeros.onrender.com");
     expect(result?.answer).toContain("https://github.com/Samarssj/Auto-Apply");
-    expect(result?.answer).toContain("https://step-pulse.vercel.app");
+    expect(result?.answer).not.toContain("Step-Pulse");
     expect(result?.answer).not.toContain("eBlogging-webapp");
     expect(fullStackProjectRecommendationAnswer("What are your best AI projects?")).toBeNull();
     expect(requestsProjectCatalog("What are your best full stack projects?")).toBe(false);
@@ -209,7 +212,7 @@ describe("resume RAG retrieval", () => {
     ["What is your hometown?", "Personal Facts", "Jammu, India"],
     ["What are your best AI projects?", "Project Recommendations", "News Pilot and Jarvis-prototype"],
     ["What is your best ML project?", "Project Recommendations", "Credit-Guard"],
-    ["What are your best full stack projects?", "Project Recommendations", "Auto Apply and Step-Pulse"],
+    ["What are your best full stack projects?", "Project Recommendations", "OptimizerOS and Auto Apply"],
     ["What are your favorite series?", "Favorite Series and Music", "Dark as my top favorite"],
     ["What are your top songs?", "Favorite Series and Music", "Hotel Drive"],
     ["What do you like to watch?", "Viewing Preferences", "psychological mysteries"],
@@ -263,7 +266,7 @@ describe("resume RAG retrieval", () => {
     expect(prompt).toContain("Chitkara University, Punjab");
     expect(prompt).toContain("fresher with two internships");
     expect(prompt).toContain("News Pilot and Jarvis-prototype for AI");
-    expect(prompt).toContain("Auto Apply plus Step-Pulse for full-stack or MERN-stack work");
+    expect(prompt).toContain("OptimizerOS plus Auto Apply for full-stack or MERN-stack work");
     expect(prompt).toContain("Favorite Anime or Favorite Movies passage");
     expect(prompt).toContain("use Markdown bullet points only");
     expect(prompt).toContain("exact GitHub repository URL");

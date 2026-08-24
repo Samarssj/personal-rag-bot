@@ -110,7 +110,7 @@ export const SAMAR_KNOWLEDGE_BASE: KnowledgeSection[] = [
   {
     title: "Project Recommendations",
     content:
-      "When asked for my best AI projects, I recommend News Pilot and Jarvis-prototype. News Pilot is my hybrid RAG-based news assistant, while Jarvis-prototype is my Tony Stark-inspired voice-based local AI desktop assistant. When asked for my best machine-learning project, I recommend Credit-Guard, my ML-based credit-card fraud-detection model pipeline. When asked for my best full-stack or MERN-stack projects, I recommend Auto Apply and Step-Pulse. Auto Apply is an AI-powered SaaS for automated job applications, with job tracking, automated ATS resume scoring, match filtering, candidate-profile parsing, and MongoDB Atlas integration. Step-Pulse is a fitness-tracking application with Firebase, Gemini-based coaching, and real-time step logging.",
+      "When asked for my best AI projects, I recommend News Pilot and Jarvis-prototype. News Pilot is my hybrid RAG-based news assistant, while Jarvis-prototype is my Tony Stark-inspired voice-based local AI desktop assistant. When asked for my best machine-learning project, I recommend Credit-Guard, my ML-based credit-card fraud-detection model pipeline. When asked for my best full-stack or MERN-stack projects, I recommend OptimizerOS and Auto Apply. OptimizerOS is an intelligent code optimizer that analyzes time and space complexity, refactors algorithmic bottlenecks into production-ready code, and presents interactive diffs for review. Auto Apply is an AI-powered SaaS for automated job applications, with job tracking, automated ATS resume scoring, match filtering, candidate-profile parsing, and MongoDB Atlas integration.",
   },
   {
     title: "Favorite Series and Music",

@@ -22,7 +22,7 @@ export const PROJECT_STACK_FILTERS = [
   {
     id: "full-stack",
     label: "Full-Stack",
-    description: "Auto Apply and Step-Pulse",
-    prompt: "What are your best full-stack projects? Explain Auto Apply and Step-Pulse and share their relevant GitHub or live links.",
+    description: "OptimizerOS and Auto Apply",
+    prompt: "What are your best full-stack projects? Explain OptimizerOS and Auto Apply and share their relevant GitHub or live links.",
   },
 ] as const satisfies readonly ProjectStackFilter[];
