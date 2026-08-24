@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { Loader2, Send, User } from "lucide-react";
+import { Loader2, RotateCcw, Send, User } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { Streamdown } from "streamdown";
 
@@ -58,6 +58,15 @@ export type AIChatBoxProps = {
    * Click to send directly
    */
   suggestedPrompts?: string[];
+
+  /** Whether assistant source-label pills are visible. */
+  showSources?: boolean;
+
+  /** The exact question that can be retried after the most recent failed response. */
+  retryQuestion?: string | null;
+
+  /** Retry callback for the most recent failed question. */
+  onRetryMessage?: (question: string) => void;
 };
 
 /**
@@ -120,6 +129,9 @@ export function AIChatBox({
   height = "600px",
   emptyStateMessage = "Start a conversation with AI",
   suggestedPrompts,
+  showSources = true,
+  retryQuestion = null,
+  onRetryMessage,
 }: AIChatBoxProps) {
   const [input, setInput] = useState("");
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -271,7 +283,7 @@ export function AIChatBox({
                           <div className="prose prose-sm dark:prose-invert max-w-none min-w-0 break-words [overflow-wrap:anywhere] [&_a]:break-all [&_a]:[overflow-wrap:anywhere]">
                             <Streamdown>{message.content}</Streamdown>
                           </div>
-                          {message.sources && message.sources.length > 0 && (
+                          {showSources && message.sources && message.sources.length > 0 && (
                             <div className="mt-3 flex flex-wrap gap-1.5 border-t border-border/70 pt-2.5">
                               {message.sources.map(source => (
                                 <span
@@ -282,6 +294,18 @@ export function AIChatBox({
                                 </span>
                               ))}
                             </div>
+                          )}
+                          {message.role === "assistant" && isLastMessage && retryQuestion && onRetryMessage && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => onRetryMessage(retryQuestion)}
+                              disabled={isLoading}
+                              className="mt-3 h-7 gap-1.5 border-[#a65045] bg-[#1b0b0c] px-2 text-xs text-[#f5c3ae] hover:bg-[#441718] hover:text-white"
+                            >
+                              <RotateCcw className="size-3" /> Retry
+                            </Button>
                           )}
                         </div>
                       ) : (

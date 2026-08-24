@@ -114,6 +114,26 @@ describe("direct Gemini adapter", () => {
     expect(fetchMock.mock.calls[1]?.[0]).toContain("models/gemini-stable:generateContent");
   });
 
+  it("uses the stable fallback after a simulated Gemini quota-exhaustion response", async () => {
+    process.env.GEMINI_API_KEY = "test-key";
+    process.env.GEMINI_MODEL = "gemini-latest";
+    process.env.GEMINI_FALLBACK_MODEL = "gemini-stable";
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ error: { message: "Resource has been exhausted." } }), { status: 429 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        candidates: [{ content: { parts: [{ text: "- Stable quota fallback answer" }] } }],
+      }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(generateGeminiText({
+      systemPrompt: "Stay grounded.",
+      messages: [{ role: "user", content: "Tell me about Samar." }],
+    })).resolves.toBe("- Stable quota fallback answer");
+
+    expect(fetchMock.mock.calls[0]?.[0]).toContain("models/gemini-latest:generateContent");
+    expect(fetchMock.mock.calls[1]?.[0]).toContain("models/gemini-stable:generateContent");
+  });
+
   it("uses the stable fallback after both streaming and primary non-streaming attempts fail", async () => {
     process.env.GEMINI_API_KEY = "test-key";
     process.env.GEMINI_MODEL = "gemini-latest";

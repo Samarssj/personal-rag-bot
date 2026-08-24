@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { LINKEDIN_PROFILE_URL, PERSONAL_RAG_REPOSITORY_URL } from "@/links";
 import { PROJECT_STACK_FILTERS } from "@/lib/projectStackFilters";
@@ -59,6 +60,8 @@ export default function Home() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [session, setSession] = useState<SessionDetails | null>(null);
   const [activeProjectStack, setActiveProjectStack] = useState<(typeof PROJECT_STACK_FILTERS)[number]["id"] | null>(null);
+  const [showSourceLabels, setShowSourceLabels] = useState(true);
+  const [retryQuestion, setRetryQuestion] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const activeTitle = scope === "samar" ? "Ask about Samar" : "Ask about an uploaded resume";
@@ -75,6 +78,7 @@ export default function Home() {
     if (isBusy) return;
     setMessages([]);
     setActiveProjectStack(null);
+    setRetryQuestion(null);
   };
 
   const switchScope = (nextScope: Scope) => {
@@ -87,6 +91,7 @@ export default function Home() {
     setMessages([]);
     setJobDescription("");
     setActiveProjectStack(null);
+    setRetryQuestion(null);
   };
 
   const uploadResume = (file: File) => {
@@ -120,6 +125,7 @@ export default function Home() {
         setScope("uploaded");
         setMessages([]);
         setActiveProjectStack(null);
+        setRetryQuestion(null);
         toast.success("Resume indexed for this temporary browser session.");
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "The resume could not be processed.");
@@ -141,6 +147,7 @@ export default function Home() {
       setScope("samar");
       setMessages([]);
       setActiveProjectStack(null);
+      setRetryQuestion(null);
       toast.success("The uploaded resume session has been deleted.");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Unable to delete the session.");
@@ -187,15 +194,16 @@ export default function Home() {
     }
   };
 
-  const sendMessage = async (question: string) => {
+  const sendMessage = async (question: string, isRetry = false) => {
     if (isBusy || (scope === "uploaded" && !session)) return;
     if (looksLikeJobDescription(question)) {
       await analyzeJobDescription(question);
       return;
     }
-    const history = messages.filter(message => message.content.trim()).slice(-8);
+    const history = (isRetry ? messages.slice(0, -2) : messages).filter(message => message.content.trim()).slice(-8);
     const userMessage: ChatMessage = { role: "user", content: question };
-    setMessages(current => [...current, userMessage, newAssistantMessage()]);
+    setMessages(current => isRetry ? [...current, newAssistantMessage()] : [...current, userMessage, newAssistantMessage()]);
+    setRetryQuestion(null);
     setIsStreaming(true);
 
     try {
@@ -244,6 +252,7 @@ export default function Home() {
         parsed.complete.forEach(processEvent);
       }
       if (buffer.trim()) processEvent(buffer);
+      setRetryQuestion(null);
     } catch (error) {
       const visitorMessage = error instanceof Error ? error.message : "Unable to generate a response.";
       setMessages(current => {
@@ -254,6 +263,7 @@ export default function Home() {
         }
         return next;
       });
+      setRetryQuestion(question);
       toast.error(visitorMessage);
     } finally {
       setIsStreaming(false);
@@ -327,7 +337,7 @@ export default function Home() {
                 <Badge className="mb-3 border-[#e85d52]/35 bg-[#7a1f26]/35 text-[#ffd1bc] hover:bg-[#7a1f26]/35">Privacy by design</Badge>
                 <p className="text-sm font-medium leading-6 text-[#f7e5dd]">Each conversation retrieves from exactly one knowledge base—never both.</p>
                 <div className="mt-4 space-y-3 text-xs text-[#caa69e]">
-                  <p className="flex gap-2"><CheckCircle2 className="mt-0.5 size-3.5 shrink-0 text-[#ff7865]" />Source labels are shown with every answer.</p>
+                  <p className="flex gap-2"><CheckCircle2 className="mt-0.5 size-3.5 shrink-0 text-[#ff7865]" />Choose whether source labels appear with answers.</p>
                   <p className="flex gap-2"><CheckCircle2 className="mt-0.5 size-3.5 shrink-0 text-[#ff7865]" />Uploaded resume text is treated as data, never instructions.</p>
                 </div>
               </CardContent>
@@ -341,7 +351,20 @@ export default function Home() {
                   <div className="flex items-center gap-2"><h2 className="text-lg font-semibold tracking-tight text-[#fff0e6]">{activeTitle}</h2>{scope === "uploaded" && <Badge variant="secondary" className="bg-[#5d2220] text-[#ffc4a7]">Session scoped</Badge>}</div>
                   <p className="mt-0.5 text-xs text-[#ba8c83]">{scope === "samar" ? "Answers are written in Samar’s first-person voice." : session ? `${session.originalFilename} · temporary session, removed on server restart` : "Upload a PDF or DOCX to begin."}</p>
                 </div>
-                <Button variant="outline" size="sm" onClick={resetConversation} disabled={messages.length === 0 || isBusy} className="border-[#9e423b] bg-[#291112] text-[#f5d4c5] hover:bg-[#451718] hover:text-white">New chat</Button>
+                <div className="flex flex-wrap items-center gap-3">
+                  <label htmlFor="source-label-visibility" className="flex cursor-pointer items-center gap-2 text-xs font-medium text-[#d8aaa0]">
+                    <span>Sources</span>
+                    <Switch
+                      id="source-label-visibility"
+                      checked={showSourceLabels}
+                      onCheckedChange={setShowSourceLabels}
+                      disabled={isBusy}
+                      aria-label="Show source labels in chat responses"
+                      className="data-[state=checked]:bg-[#bd2f38] data-[state=unchecked]:bg-[#5b2928]"
+                    />
+                  </label>
+                  <Button variant="outline" size="sm" onClick={resetConversation} disabled={messages.length === 0 || isBusy} className="border-[#9e423b] bg-[#291112] text-[#f5d4c5] hover:bg-[#451718] hover:text-white">New chat</Button>
+                </div>
               </div>
 
               {scope === "uploaded" && !session && (
@@ -415,6 +438,9 @@ export default function Home() {
                   placeholder={scope === "samar" ? "Ask about my work or paste a job description…" : session ? "Ask about this candidate or paste a job description…" : "Upload a resume to enable chat…"}
                   emptyStateMessage={scope === "samar" ? "Ask me something about my work, or paste a job description to estimate the match." : session ? "The resume is ready. Ask a question or paste a job description for an estimate." : "Upload a resume to start a private conversation."}
                   suggestedPrompts={scope === "uploaded" && !session ? undefined : suggestedPrompts}
+                  showSources={showSourceLabels}
+                  retryQuestion={retryQuestion}
+                  onRetryMessage={question => void sendMessage(question, true)}
               />
             </Card>
           </section>
