@@ -21,7 +21,7 @@ export const PROJECT_STACK_FILTERS = [
   },
   {
     id: "full-stack",
-    label: "Full-Stack",
+    label: "Full-Stack AI",
     description: "OptimizerOS and Auto Apply",
     prompt: "What are your best full-stack projects? Explain OptimizerOS and Auto Apply and share their relevant GitHub or live links.",
   },
